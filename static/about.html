@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About — Meeting Transcriber</title>
+<style>
+:root{
+  --bg:#0f1115; --panel:#181b22; --panel2:#1f232d; --border:#2a2f3a;
+  --text:#e8eaf0; --dim:#9aa3b2; --faint:#6b7484;
+  --blue:#4f8cff; --green:#37d0a0; --amber:#f0a840; --purple:#b98aff; --pink:#e06ad0;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:15px/1.6 'Segoe UI',system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased}
+a{color:var(--blue)}
+.wrap{max-width:1040px;margin:0 auto;padding:0 24px}
+
+/* ---------- top bar ---------- */
+.bar{position:sticky;top:0;z-index:20;background:#0f1115ee;backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--border)}
+.bar .wrap{display:flex;align-items:center;gap:14px;height:56px}
+.bar b{font-size:15px}
+.bar .sp{flex:1}
+.btn{background:var(--panel2);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:7px 14px;font-size:14px;cursor:pointer;text-decoration:none;
+  display:inline-block;transition:.15s}
+.btn:hover{border-color:var(--blue);transform:translateY(-1px)}
+.btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+
+/* ---------- hero ---------- */
+.hero{position:relative;overflow:hidden;border-bottom:1px solid var(--border)}
+.hero::before{content:'';position:absolute;inset:-60% -20% auto;height:520px;
+  background:radial-gradient(60% 60% at 30% 40%,#4f8cff33,transparent 70%),
+             radial-gradient(50% 50% at 75% 30%,#37d0a022,transparent 70%);
+  pointer-events:none}
+.hero::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(#ffffff05 1px,transparent 1px),
+                   linear-gradient(90deg,#ffffff05 1px,transparent 1px);
+  background-size:44px 44px;mask-image:linear-gradient(#000,transparent 75%)}
+.hero .wrap{position:relative;padding:64px 24px 52px}
+.eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--green);border:1px solid #37d0a044;background:#37d0a010;
+  padding:5px 12px;border-radius:20px;margin-bottom:20px}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 0 0 #37d0a099;animation:pulse 2.4s infinite}
+@keyframes pulse{70%{box-shadow:0 0 0 8px #37d0a000}100%{box-shadow:0 0 0 0 #37d0a000}}
+h1{font-size:44px;line-height:1.12;font-weight:700;letter-spacing:-.02em;max-width:15ch}
+h1 em{font-style:normal;background:linear-gradient(100deg,var(--blue),var(--green) 60%,var(--purple));
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.lede{margin-top:18px;font-size:18px;color:var(--dim);max-width:60ch}
+.stats{display:flex;gap:12px;margin-top:34px;flex-wrap:wrap}
+.stat{background:#181b22aa;border:1px solid var(--border);border-radius:12px;padding:14px 18px;
+  min-width:150px;flex:1}
+.stat .n{font-size:24px;font-weight:700;letter-spacing:-.02em}
+.stat .l{font-size:12px;color:var(--faint);margin-top:2px}
+
+/* ---------- sections ---------- */
+section{scroll-margin-top:56px;padding:56px 0;border-bottom:1px solid var(--border)}
+.kicker{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);
+  font-weight:600;margin-bottom:10px}
+h2{font-size:27px;letter-spacing:-.01em;margin-bottom:8px}
+.sub{color:var(--dim);max-width:70ch;margin-bottom:28px}
+.figure{background:var(--panel);border:1px solid var(--border);border-radius:14px;
+  padding:12px;overflow-x:auto}
+.figure svg{display:block;min-width:720px;width:100%;height:auto}
+.cap{color:var(--faint);font-size:12.5px;margin-top:10px;text-align:center}
+
+/* ---------- svg animation ---------- */
+.flow{stroke-dasharray:5 7;animation:march 1.4s linear infinite}
+@keyframes march{to{stroke-dashoffset:-24}}
+.node{opacity:0;animation:rise .5s ease-out forwards}
+@keyframes rise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+.spark{animation:glide 5s ease-in-out infinite}
+@keyframes glide{0%{opacity:0}8%{opacity:1}92%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .flow,.node,.spark,.dot{animation:none!important;opacity:1!important}
+}
+
+/* ---------- cards ---------- */
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(232px,1fr))}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px;
+  transition:.18s}
+.card:hover{transform:translateY(-3px);border-color:#3d4657;box-shadow:0 10px 26px #0006}
+.card h4{font-size:14.5px;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+.card .role{font-size:12px;color:var(--blue);margin-bottom:7px;font-weight:600}
+.card p{font-size:13px;color:var(--dim)}
+.chip{display:inline-block;vertical-align:middle;font-size:11px;padding:2px 8px;border-radius:20px;
+  border:1px solid var(--border);background:var(--panel2);color:var(--dim);margin-right:5px}
+
+/* ---------- two-up ---------- */
+.two{display:grid;gap:14px;grid-template-columns:1fr 1fr}
+@media(max-width:820px){.two{grid-template-columns:1fr}h1{font-size:33px}}
+.engine{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:20px;
+  position:relative;overflow:hidden}
+.engine::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.engine.local::before{background:linear-gradient(90deg,var(--green),transparent)}
+.engine.cloud::before{background:linear-gradient(90deg,var(--purple),transparent)}
+.engine h3{font-size:17px;margin-bottom:4px}
+.engine .tag{font-size:12px;color:var(--faint);margin-bottom:14px}
+.engine ul{list-style:none;font-size:13.5px}
+.engine li{padding:6px 0 6px 22px;position:relative;color:var(--dim);border-bottom:1px solid #ffffff08}
+.engine li:last-child{border-bottom:0}
+.engine li::before{position:absolute;left:0;top:6px}
+.engine li.y::before{content:'✓';color:var(--green)}
+.engine li.n::before{content:'✕';color:#ff6b6b}
+.engine li.i::before{content:'•';color:var(--faint)}
+
+/* ---------- table ---------- */
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--border)}
+th{color:var(--faint);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+tbody tr:hover{background:#ffffff05}
+td.win{color:var(--green);font-weight:600}
+td.bad{color:#ff8080}
+.mono{font-family:'Cascadia Code',Consolas,monospace;font-size:12.5px}
+
+/* ---------- callout ---------- */
+.note{border-left:3px solid var(--amber);background:#f0a84010;border-radius:0 10px 10px 0;
+  padding:14px 18px;color:#f0cf9a;font-size:13.5px;margin-top:16px}
+.note b{color:var(--amber)}
+footer{padding:40px 0 60px;color:var(--faint);font-size:13px}
+</style>
+</head>
+<body>
+
+<div class="bar"><div class="wrap">
+  <b>🎙️ Meeting Transcriber</b>
+  <span class="sp"></span>
+  <a class="btn" href="/">← Back to app</a>
+  <a class="btn primary" href="/setup">⚙ Setup</a>
+</div></div>
+
+<!-- ================= HERO ================= -->
+<div class="hero"><div class="wrap">
+  <div class="eyebrow"><span class="dot"></span> Runs on your laptop · Nothing uploaded</div>
+  <h1>Your meetings, <em>written down</em> — who said what, in Malay and English.</h1>
+  <p class="lede">Drop in a 2-hour recording. Get back an accurate transcript with every speaker
+  labelled, a summary you can actually use, and a player that follows along line by line.
+  No accounts, no subscription, no audio leaving the building.</p>
+  <div class="stats">
+    <div class="stat"><div class="n">1–2 hrs</div><div class="l">Recording length per file</div></div>
+    <div class="stat"><div class="n">~4.5×</div><div class="l">Faster than realtime on this GPU</div></div>
+    <div class="stat"><div class="n">BM + EN</div><div class="l">Including mixed mid-sentence</div></div>
+    <div class="stat"><div class="n">100%</div><div class="l">Local by default</div></div>
+  </div>
+</div></div>
+
+<!-- ================= USER JOURNEY ================= -->
+<section id="journey"><div class="wrap">
+  <div class="kicker">What you actually do</div>
+  <h2>Five steps, and four of them are you reading</h2>
+  <p class="sub">You record the meeting however you already do. Everything after the drop is automatic —
+  the app tells you what stage it's on, and you come back to a finished document.</p>
+
+  <div class="figure">
+  <svg viewBox="0 0 1000 210" role="img" aria-label="User journey: record, drop in, it works, review, share">
+    <defs>
+      <!-- userSpaceOnUse: a horizontal line has zero bbox height, which makes
+           an objectBoundingBox gradient degenerate (renders flat grey) -->
+      <linearGradient id="jline" gradientUnits="userSpaceOnUse" x1="100" y1="78" x2="900" y2="78">
+        <stop offset="0" stop-color="#4f8cff"/><stop offset=".5" stop-color="#37d0a0"/>
+        <stop offset="1" stop-color="#b98aff"/>
+      </linearGradient>
+      <filter id="soft"><feGaussianBlur stdDeviation="7" result="b"/>
+        <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+
+    <line x1="100" y1="78" x2="900" y2="78" stroke="#323847" stroke-width="3"/>
+    <line x1="100" y1="78" x2="900" y2="78" stroke="url(#jline)" stroke-width="3"
+          class="flow" opacity="1"/>
+    <circle r="4" fill="#fff" filter="url(#soft)" class="spark">
+      <animateMotion dur="5s" repeatCount="indefinite" path="M100,78 L900,78"/>
+    </circle>
+
+    <!-- step 1 -->
+    <g class="node" style="animation-delay:.05s">
+      <circle cx="100" cy="78" r="26" fill="#181b22" stroke="#4f8cff" stroke-width="2"/>
+      <text x="100" y="86" font-size="21" text-anchor="middle">🎙️</text>
+      <text x="100" y="132" font-size="13.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">Record</text>
+      <text x="100" y="152" font-size="11.5" fill="#9aa3b2" text-anchor="middle">Phone, Teams,</text>
+      <text x="100" y="167" font-size="11.5" fill="#9aa3b2" text-anchor="middle">any recorder</text>
+    </g>
+    <!-- step 2 -->
+    <g class="node" style="animation-delay:.18s">
+      <circle cx="300" cy="78" r="26" fill="#181b22" stroke="#4f8cff" stroke-width="2"/>
+      <text x="300" y="86" font-size="20" text-anchor="middle">📥</text>
+      <text x="300" y="132" font-size="13.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">Drop it in</text>
+      <text x="300" y="152" font-size="11.5" fill="#9aa3b2" text-anchor="middle">Name it, pick language</text>
+      <text x="300" y="167" font-size="11.5" fill="#9aa3b2" text-anchor="middle">and speaker count</text>
+    </g>
+    <!-- step 3 -->
+    <g class="node" style="animation-delay:.31s">
+      <circle cx="500" cy="78" r="30" fill="#181b22" stroke="#37d0a0" stroke-width="2"/>
+      <text x="500" y="87" font-size="22" text-anchor="middle">⚙️</text>
+      <text x="500" y="132" font-size="13.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">It works</text>
+      <text x="500" y="152" font-size="11.5" fill="#9aa3b2" text-anchor="middle">Live progress: converting →</text>
+      <text x="500" y="167" font-size="11.5" fill="#9aa3b2" text-anchor="middle">transcribing → speakers → summary</text>
+    </g>
+    <!-- step 4 -->
+    <g class="node" style="animation-delay:.44s">
+      <circle cx="700" cy="78" r="26" fill="#181b22" stroke="#b98aff" stroke-width="2"/>
+      <text x="700" y="86" font-size="20" text-anchor="middle">📖</text>
+      <text x="700" y="132" font-size="13.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">Review</text>
+      <text x="700" y="152" font-size="11.5" fill="#9aa3b2" text-anchor="middle">Player follows the text.</text>
+      <text x="700" y="167" font-size="11.5" fill="#9aa3b2" text-anchor="middle">Rename Speaker 1 → “Pn. Aisyah”</text>
+    </g>
+    <!-- step 5 -->
+    <g class="node" style="animation-delay:.57s">
+      <circle cx="900" cy="78" r="26" fill="#181b22" stroke="#b98aff" stroke-width="2"/>
+      <text x="900" y="86" font-size="20" text-anchor="middle">📤</text>
+      <text x="900" y="132" font-size="13.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">Share</text>
+      <text x="900" y="152" font-size="11.5" fill="#9aa3b2" text-anchor="middle">Export .txt, .md</text>
+      <text x="900" y="167" font-size="11.5" fill="#9aa3b2" text-anchor="middle">or .srt subtitles</text>
+    </g>
+
+    <text x="500" y="26" font-size="12" fill="#6b7484" text-anchor="middle">
+      you do this ────────────────────────  the app does this  ──────────────────────── you do this</text>
+  </svg>
+  </div>
+  <div class="cap">A 1-hour meeting is typically ready in 10–15 minutes. You can close the tab — it keeps working.</div>
+</div></section>
+
+<!-- ================= PIPELINE ================= -->
+<section id="pipeline"><div class="wrap">
+  <div class="kicker">Under the hood</div>
+  <h2>How sound becomes a labelled transcript</h2>
+  <p class="sub">Two engines, same result shape. The local engine does everything on your machine.
+  The cloud engine sends audio to Google for the words, but still does timing and speaker
+  detection locally — because that's the only way to make either trustworthy.</p>
+
+  <div class="figure">
+  <svg viewBox="0 0 1000 430" role="img" aria-label="Processing pipeline for local and cloud engines">
+    <defs>
+      <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="3" orient="auto">
+        <path d="M0,0 L8,3 L0,6 Z" fill="#4a5365"/>
+      </marker>
+      <linearGradient id="gL" x1="0" x2="1"><stop offset="0" stop-color="#37d0a0"/><stop offset="1" stop-color="#4f8cff"/></linearGradient>
+      <linearGradient id="gC" x1="0" x2="1"><stop offset="0" stop-color="#b98aff"/><stop offset="1" stop-color="#e06ad0"/></linearGradient>
+    </defs>
+
+    <!-- input -->
+    <g class="node">
+      <rect x="16" y="176" width="104" height="78" rx="11" fill="#1f232d" stroke="#3d4657"/>
+      <text x="68" y="209" font-size="20" text-anchor="middle">🔊</text>
+      <text x="68" y="230" font-size="12" font-weight="600" fill="#e8eaf0" text-anchor="middle">Your file</text>
+      <text x="68" y="245" font-size="10" fill="#6b7484" text-anchor="middle">mp3 m4a mp4 wav</text>
+    </g>
+    <path d="M124,200 L160,200 L160,96 L196,96" stroke="#4a5365" fill="none" marker-end="url(#ar)"/>
+    <path d="M124,232 L160,232 L160,330 L196,330" stroke="#4a5365" fill="none" marker-end="url(#ar)"/>
+
+    <!-- ============ LOCAL LANE ============ -->
+    <rect x="188" y="30" width="700" height="128" rx="13" fill="#37d0a008" stroke="#37d0a033"/>
+    <text x="204" y="50" font-size="11.5" font-weight="700" fill="#37d0a0">💻 LOCAL ENGINE — private, free, exact timestamps</text>
+
+    <g class="node" style="animation-delay:.1s">
+      <rect x="196" y="66" width="118" height="62" rx="9" fill="#181b22" stroke="#37d0a066"/>
+      <text x="255" y="88" font-size="11.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">ffmpeg</text>
+      <text x="255" y="104" font-size="9.5" fill="#9aa3b2" text-anchor="middle">16 kHz mono · lift</text>
+      <text x="255" y="116" font-size="9.5" fill="#9aa3b2" text-anchor="middle">quiet voices</text>
+    </g>
+    <line x1="318" y1="97" x2="342" y2="97" stroke="#4a5365" marker-end="url(#ar)"/>
+    <g class="node" style="animation-delay:.2s">
+      <rect x="346" y="66" width="150" height="62" rx="9" fill="#181b22" stroke="#37d0a0"/>
+      <text x="421" y="86" font-size="11.5" font-weight="700" fill="#37d0a0" text-anchor="middle">Whisper large-v3</text>
+      <text x="421" y="101" font-size="9.5" fill="#9aa3b2" text-anchor="middle">speech → text + exact time</text>
+      <text x="421" y="116" font-size="9.5" fill="#6b7484" text-anchor="middle">GPU · faster-whisper</text>
+    </g>
+    <line x1="500" y1="97" x2="524" y2="97" stroke="#4a5365" marker-end="url(#ar)"/>
+    <g class="node" style="animation-delay:.3s">
+      <rect x="528" y="66" width="158" height="62" rx="9" fill="#181b22" stroke="#37d0a066"/>
+      <text x="607" y="86" font-size="11.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">Diarization</text>
+      <text x="607" y="101" font-size="9.5" fill="#9aa3b2" text-anchor="middle">pyannote + TitaNet</text>
+      <text x="607" y="116" font-size="9.5" fill="#6b7484" text-anchor="middle">who spoke when · CPU</text>
+    </g>
+    <line x1="690" y1="97" x2="714" y2="97" stroke="#4a5365" marker-end="url(#ar)"/>
+    <g class="node" style="animation-delay:.4s">
+      <rect x="718" y="66" width="152" height="62" rx="9" fill="#181b22" stroke="#37d0a066"/>
+      <text x="794" y="88" font-size="11.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">Merge</text>
+      <text x="794" y="104" font-size="9.5" fill="#9aa3b2" text-anchor="middle">each sentence → the voice</text>
+      <text x="794" y="116" font-size="9.5" fill="#9aa3b2" text-anchor="middle">it overlaps most</text>
+    </g>
+
+    <!-- ============ CLOUD LANE ============ -->
+    <rect x="188" y="266" width="700" height="140" rx="13" fill="#b98aff08" stroke="#b98aff33"/>
+    <text x="204" y="286" font-size="11.5" font-weight="700" fill="#b98aff">☁️ CLOUD ENGINE — your Gemini key · audio leaves the laptop</text>
+
+    <g class="node" style="animation-delay:.1s">
+      <rect x="196" y="300" width="118" height="62" rx="9" fill="#181b22" stroke="#b98aff66"/>
+      <text x="255" y="322" font-size="11.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">ffmpeg</text>
+      <text x="255" y="338" font-size="9.5" fill="#9aa3b2" text-anchor="middle">~5 min chunks,</text>
+      <text x="255" y="350" font-size="9.5" fill="#9aa3b2" text-anchor="middle">cut at silence</text>
+    </g>
+    <line x1="318" y1="331" x2="342" y2="331" stroke="#4a5365" marker-end="url(#ar)"/>
+    <g class="node" style="animation-delay:.2s">
+      <rect x="346" y="300" width="150" height="62" rx="9" fill="#181b22" stroke="#b98aff"/>
+      <text x="421" y="320" font-size="11.5" font-weight="700" fill="#b98aff" text-anchor="middle">Gemini 2.5</text>
+      <text x="421" y="335" font-size="9.5" fill="#9aa3b2" text-anchor="middle">words + order only</text>
+      <text x="421" y="350" font-size="9.5" fill="#f0a840" text-anchor="middle">✋ no timestamps asked</text>
+    </g>
+    <line x1="500" y1="331" x2="524" y2="331" stroke="#4a5365" marker-end="url(#ar)"/>
+    <g class="node" style="animation-delay:.3s">
+      <rect x="528" y="300" width="158" height="62" rx="9" fill="#181b22" stroke="#b98aff66"/>
+      <text x="607" y="320" font-size="11.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">Silero VAD → timing</text>
+      <text x="607" y="335" font-size="9.5" fill="#9aa3b2" text-anchor="middle">find real speech locally,</text>
+      <text x="607" y="350" font-size="9.5" fill="#9aa3b2" text-anchor="middle">lay text across it</text>
+    </g>
+    <line x1="690" y1="331" x2="714" y2="331" stroke="#4a5365" marker-end="url(#ar)"/>
+    <g class="node" style="animation-delay:.4s">
+      <rect x="718" y="300" width="152" height="62" rx="9" fill="#181b22" stroke="#b98aff66"/>
+      <text x="794" y="322" font-size="11.5" font-weight="600" fill="#e8eaf0" text-anchor="middle">Diarization</text>
+      <text x="794" y="338" font-size="9.5" fill="#9aa3b2" text-anchor="middle">local — Gemini's “S1” differs</text>
+      <text x="794" y="350" font-size="9.5" fill="#9aa3b2" text-anchor="middle">between chunks</text>
+    </g>
+
+    <!-- converge -->
+    <path d="M874,97 L910,97 L910,196 L936,196" stroke="url(#gL)" fill="none" stroke-width="1.6" marker-end="url(#ar)"/>
+    <path d="M874,331 L910,331 L910,236 L936,236" stroke="url(#gC)" fill="none" stroke-width="1.6" marker-end="url(#ar)"/>
+    <g class="node" style="animation-delay:.55s">
+      <rect x="880" y="176" width="112" height="78" rx="11" fill="#1f232d" stroke="#4f8cff"/>
+      <text x="936" y="203" font-size="17" text-anchor="middle">📄</text>
+      <text x="936" y="223" font-size="11" font-weight="700" fill="#e8eaf0" text-anchor="middle">Transcript</text>
+      <text x="936" y="237" font-size="9.5" fill="#9aa3b2" text-anchor="middle">+ speakers</text>
+      <text x="936" y="249" font-size="9.5" fill="#9aa3b2" text-anchor="middle">+ summary</text>
+    </g>
+
+    <text x="500" y="424" font-size="10.5" fill="#6b7484" text-anchor="middle">
+      Summary (Ollama if installed, else built-in) runs the same way for both engines</text>
+  </svg>
+  </div>
+</div></section>
+
+<!-- ================= ENGINES ================= -->
+<section id="engines"><div class="wrap">
+  <div class="kicker">Choose per upload</div>
+  <h2>Local or cloud — you decide, meeting by meeting</h2>
+  <p class="sub">Switch in Setup. Confidential meeting? Keep it local. Weak laptop or in a hurry?
+  Use the cloud. The rest of the app behaves identically.</p>
+  <div class="two">
+    <div class="engine local">
+      <h3>💻 Local — Whisper large-v3</h3>
+      <div class="tag">Default · free forever</div>
+      <ul>
+        <li class="y">Audio <b>never leaves your laptop</b>; works fully offline</li>
+        <li class="y">Exact timestamps, straight from the model</li>
+        <li class="y">Best accuracy for Malay + English code-switching</li>
+        <li class="i">~4.5× realtime on the RTX 4050 (1 hr ≈ 13 min)</li>
+        <li class="n">Needs an NVIDIA GPU to be fast (CPU works, slower)</li>
+        <li class="i">One-time 3 GB model download</li>
+      </ul>
+    </div>
+    <div class="engine cloud">
+      <h3>☁️ Cloud — Google Gemini</h3>
+      <div class="tag">Opt-in · your own API key · Google may bill you</div>
+      <ul>
+        <li class="y">No GPU needed — runs on any machine or Linux server</li>
+        <li class="y">Fast: 15 min meeting in ~2 min</li>
+        <li class="n"><b>Your recording is uploaded to Google</b> (~48 h retention)</li>
+        <li class="n">Timestamps reconstructed locally (~2 s slack, not exact)</li>
+        <li class="i">Speakers still detected on your machine</li>
+        <li class="i">Needs internet + a key from aistudio.google.com</li>
+      </ul>
+    </div>
+  </div>
+</div></section>
+
+<!-- ================= STACK ================= -->
+<section id="stack"><div class="wrap">
+  <div class="kicker">Tech stack</div>
+  <h2>Everything open, nothing locked in</h2>
+  <p class="sub">Plain files on disk, no database, no build step, no npm. You can read every artefact
+  the app produces with Notepad.</p>
+  <div class="grid">
+    <div class="card"><h4>🗣️ Whisper large-v3</h4><div class="role">Speech → text</div>
+      <p>OpenAI's multilingual model — the strongest open option for Malay, English and mixing the two mid-sentence. Run via faster-whisper / CTranslate2 on the GPU.</p></div>
+    <div class="card"><h4>👥 pyannote 3.0 + TitaNet</h4><div class="role">Who spoke when</div>
+      <p>Segmentation splits speech turns; TitaNet-Large fingerprints each voice; clustering groups them. Runs on CPU through sherpa-onnx — no PyTorch, no HF token.</p></div>
+    <div class="card"><h4>🔈 Silero VAD</h4><div class="role">Where speech is</div>
+      <p>Tiny CPU model. Skips silence for the local engine, and provides the timeline that makes cloud transcripts line up with the audio.</p></div>
+    <div class="card"><h4>🎛️ ffmpeg</h4><div class="role">Audio plumbing</div>
+      <p>Reads anything. High-pass kills room rumble; speech normalization lifts people sitting far from the mic.</p></div>
+    <div class="card"><h4>☁️ Gemini 2.5 Flash</h4><div class="role">Optional cloud ASR</div>
+      <p>Strong on Malay. Used for words only, with your own API key, only if you switch it on.</p></div>
+    <div class="card"><h4>🧠 Ollama · qwen2.5</h4><div class="role">Summaries</div>
+      <p>If installed, writes the summary in the meeting's own language. If not, a built-in extractive summary still works.</p></div>
+    <div class="card"><h4>⚡ FastAPI + uvicorn</h4><div class="role">Backend</div>
+      <p>One background worker, one queue. Interrupted jobs re-queue themselves when the server restarts.</p></div>
+    <div class="card"><h4>📄 Vanilla HTML/CSS/JS</h4><div class="role">Frontend</div>
+      <p>Single file, no framework, no build. Opens instantly and will still run in five years.</p></div>
+  </div>
+</div></section>
+
+<!-- ================= HONEST ================= -->
+<section id="limits"><div class="wrap">
+  <div class="kicker">Straight answers</div>
+  <h2>What it can't do</h2>
+  <p class="sub">Worth knowing before you trust a transcript in a meeting minute.</p>
+  <div class="grid">
+    <div class="card"><h4>🗣️🗣️ Two people at once</h4>
+      <p>One microphone records <b>one mixed waveform</b>. When voices overlap, the words go to the dominant speaker. No current system fully separates them from a single-mic recording — cloud included.</p></div>
+    <div class="card"><h4>🔢 Auto speaker count</h4>
+      <p>Echoey rooms make one voice look like several. <b>If you know how many people spoke, type it in</b> — it beats auto-detect every time.</p></div>
+    <div class="card"><h4>⏱️ Cloud timing</h4>
+      <p>Reconstructed, not measured: ~2 s median error, ~7 s worst. Local timestamps are exact. Use local if you need frame-accurate subtitles.</p></div>
+    <div class="card"><h4>🔇 Very distant voices</h4>
+      <p>Speech normalization lifts them, but if a human listener can't make out the words, neither can the model.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <b>Meeting Transcriber</b> — local-first meeting transcription for Malay &amp; English.<br>
+  Data lives in <span class="mono">data/&lt;meeting-id&gt;/</span> as plain audio, JSON and Markdown. Delete a meeting and the folder goes with it.<br>
+  Full write-up: <span class="mono">docs/summary.md</span> · Requirements &amp; engine switch: <a href="/setup">Setup page</a>
+</div></footer>
+
+</body>
+</html>

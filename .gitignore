@@ -1,0 +1,51 @@
+# ---- secrets -------------------------------------------------------------
+# Holds the Gemini API key in plain text. NEVER commit this.
+# Copy config.example.json -> config.json and fill it in locally.
+config.json
+config.json.bak
+config.json.tmp
+
+# ---- meeting data --------------------------------------------------------
+# Real recordings, transcripts and summaries. Private by definition, and the
+# audio is far too big for git (GitHub rejects files over 100 MB).
+data/
+*.wav
+*.mp3
+*.m4a
+*.aac
+*.ogg
+*.mp4
+*.flac
+!static/**/*.wav
+
+# ---- models --------------------------------------------------------------
+# ~3.5 GB of downloaded weights. start.sh / the Setup page fetch these.
+models/
+*.onnx
+*.bin
+*.ct2
+
+# ---- python --------------------------------------------------------------
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- runtime -------------------------------------------------------------
+*.log
+server.log
+*.tmp
+meta.json.tmp
+
+# ---- editors / OS --------------------------------------------------------
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+Desktop.ini
+.DS_Store

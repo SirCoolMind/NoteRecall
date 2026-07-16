@@ -1,0 +1,20 @@
+# Core app + local engine. Works on CPU, on any machine.
+#   pip install -r requirements.txt
+#
+# For NVIDIA GPU acceleration, ALSO install requirements-gpu.txt (2.3 GB of
+# CUDA libraries — skip it on CPU-only machines and servers).
+
+# --- core: needed for every setup (Windows, Linux, local or cloud engine)
+fastapi
+uvicorn
+python-multipart
+requests
+numpy
+
+# --- local engine (Whisper on this machine).
+# Not strictly needed if you only use the Google Gemini cloud engine, but the
+# cloud engine still uses sherpa-onnx for speaker detection and Silero VAD
+# (bundled with faster-whisper) for timing — so keep these unless you are very
+# tight on space.
+faster-whisper
+sherpa-onnx

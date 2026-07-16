@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Meeting Transcriber</title>
+<style>
+:root{
+  --bg:#0f1115; --panel:#181b22; --panel2:#1f232d; --border:#2a2f3a;
+  --text:#e8eaf0; --dim:#9aa3b2; --accent:#4f8cff; --accent2:#37d0a0;
+  --danger:#ff5d5d;
+  --spk0:#4f8cff; --spk1:#37d0a0; --spk2:#f0a840; --spk3:#e06ad0;
+  --spk4:#6adade; --spk5:#b98aff; --spk6:#ff8a65; --spk7:#9ccc65;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:15px/1.55 'Segoe UI',system-ui,sans-serif;min-height:100vh}
+a{color:var(--accent)}
+header{display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:5}
+header h1{font-size:18px;font-weight:600;cursor:pointer}
+header .badge{font-size:12px;color:var(--dim);background:var(--panel2);padding:3px 10px;border-radius:20px}
+main{max-width:1000px;margin:0 auto;padding:24px}
+.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
+/* upload */
+#drop{border:2px dashed var(--border);border-radius:12px;padding:34px;text-align:center;color:var(--dim);cursor:pointer;transition:.15s}
+#drop.hover,#drop:hover{border-color:var(--accent);color:var(--text);background:var(--panel2)}
+#drop strong{color:var(--text)}
+.uprow{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
+input[type=text],select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:14px;outline:none}
+input[type=text]:focus,select:focus{border-color:var(--accent)}
+input[type=text]{flex:1;min-width:180px}
+button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 16px;font-size:14px;cursor:pointer;font-weight:500}
+button:hover{filter:brightness(1.12)}
+button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--border)}
+button.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
+button:disabled{opacity:.45;cursor:default}
+/* list */
+.meeting{display:flex;align-items:center;gap:14px;cursor:pointer}
+.meeting:hover{border-color:var(--accent)}
+.meeting .info{flex:1;min-width:0}
+.meeting .title{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meeting .sub{color:var(--dim);font-size:13px;margin-top:2px}
+.status{font-size:12px;padding:4px 10px;border-radius:20px;white-space:nowrap}
+.status.done{background:#173527;color:var(--accent2)}
+.status.error{background:#3a1d1d;color:var(--danger)}
+.status.working{background:#1d2a44;color:var(--accent)}
+.pbar{height:5px;background:var(--panel2);border-radius:3px;margin-top:8px;overflow:hidden}
+.pbar>div{height:100%;background:var(--accent);transition:width .5s;border-radius:3px}
+/* detail */
+.tabs{display:flex;gap:6px;margin:14px 0}
+.tabs button{background:var(--panel2);color:var(--dim);border:1px solid var(--border)}
+.tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.seg{display:flex;gap:12px;padding:9px 10px;border-radius:8px;cursor:pointer}
+.seg:hover{background:var(--panel2)}
+.seg .ts{color:var(--dim);font-size:12px;min-width:52px;padding-top:3px;font-variant-numeric:tabular-nums}
+.seg .who{font-weight:600;min-width:100px;max-width:160px;font-size:13px;padding-top:2px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.seg .who:hover{text-decoration:underline}
+.seg .txt{flex:1}
+.seg.hit .txt{background:#3a3413;border-radius:4px}
+#summary{line-height:1.7}
+#summary h2{font-size:16px;margin:18px 0 8px;color:var(--accent)}
+#summary ul{padding-left:22px}
+#summary blockquote{color:var(--dim);border-left:3px solid var(--border);padding-left:12px;margin-top:16px;font-size:13px}
+/* floating player: stays visible while scrolling the transcript */
+#playerbar{position:sticky;top:53px;z-index:4;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px 14px;margin:10px 0;box-shadow:0 6px 18px #0007}
+#playerbar audio{width:100%;display:block}
+#playerbar .nowplaying{font-size:12px;color:var(--dim);padding:2px 2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#playerbar .nowplaying b{color:var(--accent)}
+.seg.active{background:#1d2a44;outline:1px solid var(--accent)}
+/* setup page */
+.check{display:flex;gap:12px;align-items:baseline;padding:8px 6px;border-bottom:1px solid var(--border)}
+.check:last-child{border-bottom:0}
+.check .ic{font-size:15px;min-width:20px}
+.check .nm{font-weight:600;min-width:240px}
+.check .dt{color:var(--dim);font-size:13px;flex:1}
+.check .hint{color:#f0a840;font-size:12px}
+.arch-stage{display:flex;gap:12px;padding:10px 6px;border-bottom:1px solid var(--border)}
+.arch-stage:last-child{border-bottom:0}
+.arch-stage .st{font-weight:600;min-width:210px}
+.arch-stage .tech{color:var(--accent);font-size:13px;min-width:200px;max-width:260px}
+.arch-stage .ds{color:var(--dim);font-size:13px;flex:1}
+.radio-row{display:flex;gap:16px;margin:10px 0;flex-wrap:wrap}
+.radio-row label{display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;cursor:pointer;flex:1;min-width:260px}
+.radio-row label.sel{border-color:var(--accent)}
+.radio-row .big{font-weight:600}
+.radio-row .small{font-size:12px;color:var(--dim)}
+.warn{background:#3a2d13;border:1px solid #f0a84055;color:#f0c884;border-radius:8px;padding:10px 14px;font-size:13px;margin:10px 0}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.toolbar .spacer{flex:1}
+#search{max-width:220px}
+.empty{text-align:center;color:var(--dim);padding:40px}
+.meta-line{color:var(--dim);font-size:13px}
+h2.pagetitle{font-size:22px;margin-bottom:2px;cursor:pointer}
+h2.pagetitle:hover::after{content:" ✎";color:var(--dim);font-size:14px}
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:22px;min-width:320px}
+dialog::backdrop{background:#0009}
+</style>
+</head>
+<body>
+<header>
+  <h1 onclick="showList()">🎙️ Meeting Transcriber</h1>
+  <span class="badge" id="device">loading…</span>
+  <span class="badge" id="summarizer-badge"></span>
+  <span class="badge" id="engine-badge"></span>
+  <div style="flex:1"></div>
+  <a class="ghost" href="/about" style="text-decoration:none;padding:8px 16px;border-radius:8px;background:var(--panel2);border:1px solid var(--border);color:var(--text);font-size:14px" title="What this is, and how it works">ℹ️ About</a>
+  <a class="ghost" href="/setup" style="text-decoration:none;padding:8px 16px;border-radius:8px;background:var(--panel2);border:1px solid var(--border);color:var(--text);font-size:14px" title="Setup & requirements">⚙ Setup</a>
+</header>
+
+<main>
+  <!-- LIST VIEW -->
+  <div id="view-list">
+    <div class="card">
+      <div id="drop">
+        <strong>Drop audio file here</strong> or click to choose<br>
+        <span style="font-size:13px">mp3 · wav · m4a · mp4 · ogg — up to 2+ hour meetings</span>
+        <input type="file" id="file" accept="audio/*,video/mp4,.m4a" hidden>
+      </div>
+      <div class="uprow">
+        <input type="text" id="title" placeholder="Meeting title (optional)">
+        <select id="lang">
+          <option value="">Auto (Malay/English)</option>
+          <option value="ms">Bahasa Melayu</option>
+          <option value="en">English</option>
+        </select>
+        <select id="nspk">
+          <option value="0">Speakers: auto</option>
+          <option>2</option><option>3</option><option>4</option>
+          <option>5</option><option>6</option><option>7</option><option>8</option>
+        </select>
+        <button id="upbtn" disabled>Transcribe</button>
+      </div>
+      <div id="upstatus" class="meta-line" style="margin-top:8px"></div>
+    </div>
+    <div id="list"></div>
+  </div>
+
+  <!-- DETAIL VIEW -->
+  <div id="view-detail" style="display:none">
+    <div class="toolbar">
+      <button class="ghost" onclick="showList()">← Back</button>
+      <div class="spacer"></div>
+      <button class="ghost" onclick="retranscribe()" title="Transcribe again with the engine selected in Setup">↻ Re-transcribe</button>
+      <button class="ghost" onclick="rediarize()" title="Re-run speaker detection only">↻ Re-detect speakers</button>
+      <button class="ghost" onclick="exportDoc('txt')">Export .txt</button>
+      <button class="ghost" onclick="exportDoc('md')">Export .md</button>
+      <button class="ghost" onclick="exportDoc('srt')">Export .srt</button>
+      <button class="danger" onclick="delMeeting()">Delete</button>
+    </div>
+    <h2 class="pagetitle" id="d-title" title="Click to rename"></h2>
+    <div class="meta-line" id="d-meta"></div>
+    <div id="playerbar">
+      <div class="nowplaying" id="nowplaying">▶ Click any dialogue line or the progress bar — the transcript follows the audio.</div>
+      <audio id="player" controls preload="metadata"></audio>
+    </div>
+    <div class="tabs">
+      <button id="tab-t" class="active" onclick="setTab('t')">Transcript</button>
+      <button id="tab-s" onclick="setTab('s')">Summary</button>
+      <input type="text" id="search" placeholder="Search transcript…" oninput="renderSegs()">
+    </div>
+    <div class="card" id="pane-t"><div id="segs"></div></div>
+    <div class="card" id="pane-s" style="display:none">
+      <div class="toolbar">
+        <span class="meta-line" id="sum-engine"></span>
+        <div class="spacer"></div>
+        <button class="ghost" onclick="resummarize()" id="resum">↻ Regenerate summary</button>
+      </div>
+      <div id="summary"></div>
+    </div>
+  </div>
+</main>
+
+<dialog id="renameDlg">
+  <p id="renameLabel" style="margin-bottom:10px;font-weight:600"></p>
+  <input type="text" id="renameInput" style="width:100%">
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+    <button class="ghost" onclick="renameDlg.close()">Cancel</button>
+    <button onclick="renameOk()">Save</button>
+  </div>
+</dialog>
+
+<script>
+const $=id=>document.getElementById(id);
+let current=null, pollTimer=null, renameCb=null;
+
+const STAGES={queued:'Queued',converting:'Converting audio',uploading:'Uploading to cloud',
+  transcribing:'Transcribing',diarizing:'Identifying speakers',summarizing:'Summarizing',
+  done:'Done',error:'Error'};
+
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
+function fmtDur(s){if(!s)return'';const m=Math.round(s/60);return m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m} min`}
+function fmtTs(s){const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=Math.floor(s%60),p=n=>String(n).padStart(2,'0');return h?`${h}:${p(m)}:${p(x)}`:`${m}:${p(x)}`}
+function spkColor(i){return i<0?'var(--dim)':`var(--spk${i%8})`}
+function spkName(meta,i){return i<0?'—':(meta.speaker_names?.[i]||`Speaker ${i+1}`)}
+
+// ---------- status badge
+function loadBadges(){
+  fetch('/api/status').then(r=>r.json()).then(s=>{
+    // the local device only matters for the local engine
+    $('device').style.display=s.engine==='gemini'?'none':'';
+    $('device').textContent='⚙ '+s.device;
+    $('summarizer-badge').textContent=s.ollama_model?('🧠 '+s.ollama_model):'🧠 built-in summary';
+    $('engine-badge').textContent=s.engine==='gemini'?('☁️ '+s.gemini_model):'💻 local';
+  }).catch(()=>{});
+}
+loadBadges();
+
+// ---------- upload
+let pickedFile=null;
+$('drop').onclick=()=>$('file').click();
+$('file').onchange=e=>setFile(e.target.files[0]);
+['dragover','dragenter'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('hover')}));
+['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.remove('hover')}));
+$('drop').addEventListener('drop',e=>setFile(e.dataTransfer.files[0]));
+function setFile(f){if(!f)return;pickedFile=f;
+  $('drop').innerHTML=`<strong>${esc(f.name)}</strong> · ${(f.size/1048576).toFixed(1)} MB — ready`;
+  $('upbtn').disabled=false;
+  if(!$('title').value)$('title').value=f.name.replace(/\.[^.]+$/,'');}
+$('upbtn').onclick=async()=>{
+  if(!pickedFile)return;
+  $('upbtn').disabled=true;$('upstatus').textContent='Uploading…';
+  const fd=new FormData();
+  fd.append('file',pickedFile);fd.append('title',$('title').value);
+  fd.append('language',$('lang').value);fd.append('num_speakers',$('nspk').value);
+  try{
+    const r=await fetch('/api/meetings',{method:'POST',body:fd});
+    if(!r.ok)throw new Error(await r.text());
+    $('upstatus').textContent='Queued for transcription ✓';
+    pickedFile=null;$('title').value='';
+    $('drop').innerHTML=`<strong>Drop audio file here</strong> or click to choose<br><span style="font-size:13px">mp3 · wav · m4a · mp4 · ogg</span><input type="file" id="file" accept="audio/*,video/mp4,.m4a" hidden>`;
+    document.querySelector('#drop input').onchange=e=>setFile(e.target.files[0]);
+    loadList();
+  }catch(e){$('upstatus').textContent='Upload failed: '+e.message;$('upbtn').disabled=false}
+};
+
+// ---------- list
+async function loadList(){
+  let items;
+  try{
+    const r=await fetch('/api/meetings');
+    if(!r.ok)throw new Error(r.status);
+    items=await r.json();
+  }catch(e){schedulePoll(loadList);return}  // transient error: retry, never freeze
+  const el=$('list');
+  if(!items.length){el.innerHTML='<div class="empty">No meetings yet — upload your first recording above.</div>';return}
+  el.innerHTML=items.map(m=>{
+    const working=!['done','error'].includes(m.status);
+    const badge=m.status==='done'?`<span class="status done">✓ Done</span>`
+      :m.status==='error'?`<span class="status error">Error</span>`
+      :`<span class="status working">${STAGES[m.status]||m.status}… ${m.progress||0}%</span>`;
+    return `<div class="card meeting" onclick="openMeeting('${m.id}')">
+      <div class="info">
+        <div class="title">${esc(m.title)}</div>
+        <div class="sub">${m.created.replace('T',' ')}${m.duration?' · '+fmtDur(m.duration):''}
+          ${m.num_speakers_found?' · '+m.num_speakers_found+' speakers':''}
+          ${m.detected_language?' · '+m.detected_language.toUpperCase():''}</div>
+        ${working?`<div class="pbar"><div style="width:${m.progress||0}%"></div></div>`:''}
+      </div>${badge}</div>`;
+  }).join('');
+  if(items.some(m=>!['done','error'].includes(m.status)))schedulePoll(loadList);
+}
+function schedulePoll(fn){clearTimeout(pollTimer);pollTimer=setTimeout(fn,2500)}
+
+// ---------- detail
+async function openMeeting(id){
+  clearTimeout(pollTimer);
+  let d;
+  try{
+    const r=await fetch('/api/meetings/'+id);
+    if(!r.ok)throw new Error(r.status);
+    d=await r.json();
+  }catch(e){schedulePoll(()=>openMeeting(id));return}  // retry, never freeze
+  current=d;
+  $('view-list').style.display='none';$('view-detail').style.display='';
+  $('d-title').textContent=d.meta.title;
+  const m=d.meta;
+  let info=`${m.created.replace('T',' ')} · ${fmtDur(m.duration)} · ${m.num_speakers_found||'?'} speakers · lang: ${(m.detected_language||'?').toUpperCase()}`;
+  if(!['done','error'].includes(m.status)){info+=` — <b style="color:var(--accent)">${STAGES[m.status]||m.status}… ${m.progress||0}%</b>`;schedulePoll(()=>openMeeting(id))}
+  if(m.status==='error')info+=` — <b style="color:var(--danger)">${esc(m.error||'failed')}</b>`;
+  $('d-meta').innerHTML=info;
+  $('player').src=`/api/meetings/${id}/audio`;
+  $('sum-engine').textContent=m.summary_engine?('engine: '+m.summary_engine):'';
+  renderSegs();renderSummary();
+}
+function renderSegs(){
+  if(!current)return;
+  const q=$('search').value.toLowerCase();
+  const meta=current.meta;
+  const el=$('segs');
+  if(!current.segments.length){el.innerHTML='<div class="empty">Transcript will appear here once processing finishes.</div>';return}
+  el.innerHTML=current.segments.map((s,i)=>{
+    if(q&&!s.text.toLowerCase().includes(q))return'';
+    return `<div class="seg${q?' hit':''}" id="seg-${i}" onclick="seekTo(${s.start})">
+      <span class="ts">${fmtTs(s.start)}</span>
+      <span class="who" style="color:${spkColor(s.speaker)}"
+        onclick="event.stopPropagation();renameSpeaker(${s.speaker})">${esc(spkName(meta,s.speaker))}</span>
+      <span class="txt">${esc(s.text)}</span></div>`;
+  }).join('');
+}
+
+// ---------- player <-> transcript sync
+let activeIdx=-1;
+function segAt(t){
+  if(!current)return -1;
+  const ss=current.segments;
+  for(let i=0;i<ss.length;i++){
+    if(t>=ss[i].start&&t<ss[i].end)return i;
+    if(ss[i].start>t)return Math.max(0,i-1);
+  }
+  return ss.length-1;
+}
+function highlightSeg(i,scroll){
+  if(i===activeIdx&&!scroll)return;
+  const prev=$('seg-'+activeIdx);if(prev)prev.classList.remove('active');
+  activeIdx=i;
+  const el=$('seg-'+i);
+  if(!el)return;
+  el.classList.add('active');
+  const s=current.segments[i];
+  $('nowplaying').innerHTML=`▶ <b>${fmtTs(s.start)}</b> · <b style="color:${spkColor(s.speaker)}">${esc(spkName(current.meta,s.speaker))}</b> — ${esc(s.text.slice(0,110))}`;
+  if(scroll)el.scrollIntoView({block:'center',behavior:'smooth'});
+}
+$('player').addEventListener('timeupdate',()=>{
+  if(!current||!current.segments.length)return;
+  highlightSeg(segAt($('player').currentTime),false);
+});
+// clicking the progress bar fires 'seeked' -> jump the transcript there too
+$('player').addEventListener('seeked',()=>{
+  if(!current||!current.segments.length)return;
+  highlightSeg(segAt($('player').currentTime),true);
+});
+function renderSummary(){
+  const md=current.summary||'_No summary yet._';
+  // minimal markdown render
+  let html=esc(md)
+    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^# (.+)$/gm,'<h2>$1</h2>')
+    .replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>')
+    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
+    .replace(/_([^_]+)_/g,'<i>$1</i>')
+    .replace(/\[([^\]]+)\]\((https?[^)]+)\)/g,'<a href="$2" target="_blank">$1</a>')
+    .replace(/^- (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g,'<ul>$1</ul>')
+    .replace(/\n{2,}/g,'<br>');
+  $('summary').innerHTML=html;
+}
+function seekTo(t){const p=$('player');p.currentTime=t;p.play()}
+function setTab(t){
+  $('tab-t').classList.toggle('active',t==='t');$('tab-s').classList.toggle('active',t==='s');
+  $('pane-t').style.display=t==='t'?'':'none';$('pane-s').style.display=t==='s'?'':'none';
+}
+function showList(){clearTimeout(pollTimer);current=null;activeIdx=-1;
+  $('view-detail').style.display='none';
+  $('view-list').style.display='';loadList()}
+
+// ---------- rename / delete / export / resummarize
+function askRename(label,initial,cb){
+  $('renameLabel').textContent=label;$('renameInput').value=initial;renameCb=cb;
+  $('renameDlg').showModal();$('renameInput').focus();
+}
+function renameOk(){$('renameDlg').close();if(renameCb)renameCb($('renameInput').value)}
+$('renameInput').addEventListener('keydown',e=>{if(e.key==='Enter')renameOk()});
+
+function renameSpeaker(i){
+  if(i<0)return;
+  askRename('Name for '+spkName(current.meta,i)+' (applies everywhere):',spkName(current.meta,i),async v=>{
+    if(!v.trim())return;
+    await fetch('/api/meetings/'+current.meta.id,{method:'PATCH',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({speaker_names:{[i]:v.trim()}})});
+    openMeeting(current.meta.id);
+  });
+}
+$('d-title').onclick=()=>{
+  askRename('Meeting title:',current.meta.title,async v=>{
+    if(!v.trim())return;
+    await fetch('/api/meetings/'+current.meta.id,{method:'PATCH',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({title:v.trim()})});
+    openMeeting(current.meta.id);
+  });
+};
+async function delMeeting(){
+  if(!confirm('Delete this meeting and its transcript permanently?'))return;
+  await fetch('/api/meetings/'+current.meta.id,{method:'DELETE'});
+  showList();
+}
+function exportDoc(fmt){location.href=`/api/meetings/${current.meta.id}/export?format=${fmt}`}
+async function retranscribe(){
+  if(!confirm('Transcribe this recording again using the engine currently selected in Setup?\n\nThe existing transcript will be replaced.'))return;
+  await fetch(`/api/meetings/${current.meta.id}/retranscribe`,{method:'POST'});
+  openMeeting(current.meta.id);
+}
+async function rediarize(){
+  const v=prompt('How many speakers were in this meeting?\nLeave empty for auto-detect.','');
+  if(v===null)return;
+  const n=parseInt(v)||0;
+  await fetch(`/api/meetings/${current.meta.id}/rediarize?num_speakers=${n}`,{method:'POST'});
+  openMeeting(current.meta.id);
+}
+async function resummarize(){
+  $('resum').disabled=true;$('resum').textContent='Working…';
+  try{
+    const r=await(await fetch(`/api/meetings/${current.meta.id}/resummarize`,{method:'POST'})).json();
+    current.summary=r.summary;$('sum-engine').textContent='engine: '+r.engine;renderSummary();
+  }finally{$('resum').disabled=false;$('resum').textContent='↻ Regenerate summary'}
+}
+
+// legacy deep link from older bookmarks
+if(location.hash==='#setup') location.replace('/setup');
+else loadList();
+</script>
+</body>
+</html>

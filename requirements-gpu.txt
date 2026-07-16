@@ -1,0 +1,9 @@
+# NVIDIA GPU acceleration for the local Whisper engine — ONLY install this if
+# `nvidia-smi` shows an NVIDIA card. It downloads ~2.3 GB of CUDA libraries
+# that are useless on CPU-only machines.
+#
+#   pip install -r requirements-gpu.txt
+#
+# cuDNN must stay below 10: CTranslate2 4.x links against cuDNN 8/9.
+nvidia-cublas-cu12
+nvidia-cudnn-cu12<10

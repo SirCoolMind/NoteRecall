@@ -1,0 +1,17 @@
+# Normalise line endings so the repo works on Windows and Linux.
+* text=auto eol=lf
+
+# Shell scripts MUST stay LF. With CRLF the shebang becomes
+# "#!/usr/bin/env bash\r" and Linux fails with "bad interpreter".
+*.sh text eol=lf
+
+# Batch files only run on Windows and want CRLF.
+*.bat text eol=crlf
+
+# Binary-ish things git shouldn't touch or try to diff.
+*.onnx  binary
+*.wav   binary
+*.mp3   binary
+*.m4a   binary
+*.aac   binary
+*.png   binary

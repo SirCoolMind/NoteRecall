@@ -1,0 +1,17 @@
+{
+  "_comment": "Copy this to config.json and edit. config.json is gitignored because it holds your API key. You can also change all of this from the /setup page.",
+
+  "engine": "local",
+  "_engine": "local = Whisper on this machine (private, free). gemini = Google cloud API (uploads your audio).",
+
+  "gemini_api_key": "",
+  "_gemini_api_key": "Only needed when engine=gemini. Get one at https://aistudio.google.com/apikey . Keep it out of git.",
+
+  "gemini_model": "gemini-2.5-flash",
+
+  "device": "auto",
+  "_device": "auto = use an NVIDIA GPU if present, else CPU. cpu = force CPU (same accuracy, slower).",
+
+  "whisper_model": "large-v3",
+  "_whisper_model": "large-v3 recommended, on GPU or CPU. Smaller models silently translate Malay/English speech instead of transcribing it."
+}
