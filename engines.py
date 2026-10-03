@@ -30,6 +30,8 @@ from pathlib import Path
 
 import requests
 
+import ffmpeg_tools
+
 API_BASE = "https://generativelanguage.googleapis.com"
 
 CHUNK_TARGET = 300.0     # aim for ~5 minute chunks
@@ -55,20 +57,6 @@ Rules:
 
 
 # ---------------------------------------------------------------- ffmpeg
-
-def _ffprobe_duration(ffmpeg_exe: str, path: Path) -> float:
-    probe = str(Path(ffmpeg_exe).parent / "ffprobe.exe") \
-        if ffmpeg_exe.lower().endswith(".exe") else "ffprobe"
-    for exe in (probe, "ffprobe"):
-        try:
-            r = subprocess.run([exe, "-v", "quiet", "-show_entries", "format=duration",
-                                "-of", "csv=p=0", str(path)], capture_output=True, text=True)
-            if r.returncode == 0 and r.stdout.strip():
-                return float(r.stdout.strip())
-        except Exception:
-            continue
-    return 0.0
-
 
 def _to_mp3(ffmpeg_exe: str, src: Path, dst: Path, start: float = None, length: float = None):
     """Mono 16 kHz 48 kbps mp3 - small upload, plenty for speech."""
@@ -267,7 +255,7 @@ def transcribe_gemini(audio_path: Path, work_dir: Path, language: str | None,
     status_cb("converting", 2)
     full_mp3 = work_dir / "_full.mp3"
     _to_mp3(ffmpeg_exe, audio_path, full_mp3)
-    duration = _ffprobe_duration(ffmpeg_exe, full_mp3)
+    duration = ffmpeg_tools.probe_duration(ffmpeg_exe, full_mp3)
     if duration <= 0:
         raise RuntimeError("could not read audio duration")
 

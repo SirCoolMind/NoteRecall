@@ -1,0 +1,89 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "pulsing-dot",
+        "value": "*",
+        "files": [
+          "static/index.html"
+        ],
+        "createdAt": "2026-10-04T07:48:20.944Z",
+        "reason": "Claude triage: the On Air lamp shows only while a job is genuinely processing (live data, DESIGN.md On Air rule); pulse stops under reduced motion"
+      },
+      {
+        "rule": "repeating-stripes-gradient",
+        "value": "*",
+        "files": [
+          "static/**/*"
+        ],
+        "createdAt": "2026-10-04T07:48:21.188Z",
+        "reason": "Claude triage: animated stripes are the documented 'processing' status form (DESIGN.md Status-By-Form rule, direction contract), not decoration"
+      },
+      {
+        "rule": "monotonous-spacing",
+        "value": "*",
+        "files": [
+          "static/index.html"
+        ],
+        "createdAt": "2026-10-04T07:48:41.854Z",
+        "reason": "Claude triage: markup carries few inline spacing values; layout spacing lives in CSS on the full 4-64px token scale (tokens.css --sp-1..8)"
+      },
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "static/css/app.css"
+        ],
+        "createdAt": "2026-10-04T09:35:05.581Z",
+        "reason": "Settings tab underline indicator; .tab has border-radius:0, not a rounded card"
+      },
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "docs/idea-to-ship-guide.html"
+        ],
+        "createdAt": "2026-10-04T09:44:28.715Z",
+        "reason": "Claude: standalone developer guide in docs/, not NoteRecall app UI; DESIGN.md governs static/ only"
+      },
+      {
+        "rule": "design-system-color",
+        "value": "*",
+        "files": [
+          "docs/idea-to-ship-guide.html"
+        ],
+        "createdAt": "2026-10-04T09:44:28.888Z",
+        "reason": "Claude: standalone developer guide in docs/, not NoteRecall app UI; DESIGN.md governs static/ only"
+      },
+      {
+        "rule": "design-system-font-size",
+        "value": "*",
+        "files": [
+          "docs/idea-to-ship-guide.html"
+        ],
+        "createdAt": "2026-10-04T09:44:29.066Z",
+        "reason": "Claude: standalone developer guide in docs/, not NoteRecall app UI; DESIGN.md governs static/ only"
+      },
+      {
+        "rule": "design-system-radius",
+        "value": "*",
+        "files": [
+          "docs/idea-to-ship-guide.html"
+        ],
+        "createdAt": "2026-10-04T09:44:29.232Z",
+        "reason": "Claude: standalone developer guide in docs/, not NoteRecall app UI; DESIGN.md governs static/ only"
+      },
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "docs/idea-to-ship-guide.html"
+        ],
+        "createdAt": "2026-10-04T09:45:14.659Z",
+        "reason": "Claude: .lane-scroll wrapper's grid cells carry 12px padding each; detector misreads the wrapper"
+      }
+    ]
+  }
+}

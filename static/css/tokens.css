@@ -1,0 +1,132 @@
+/* NoteRecall design tokens: the single source for colour, type, space and motion.
+   Every page links this file first. Components use these variables, never raw values.
+   Theme follows the OS (prefers-color-scheme); [data-theme] on <html> overrides it. */
+
+/* Self-hosted so the app works offline. Files live in static/fonts/ (OFL licensed). */
+@font-face { font-family: "Barlow"; src: url("../fonts/barlow-400.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("../fonts/barlow-500.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Barlow"; src: url("../fonts/barlow-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Barlow Semi Condensed"; src: url("../fonts/barlow-semi-condensed-600.woff2") format("woff2"); font-weight: 600; font-display: swap; }
+@font-face { font-family: "Barlow Semi Condensed"; src: url("../fonts/barlow-semi-condensed-700.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- type ---- */
+  --font-body: "Barlow", "Segoe UI", system-ui, sans-serif;
+  --font-slot: "Barlow Semi Condensed", "Arial Narrow", "Segoe UI", sans-serif; /* times, slot labels, headings */
+  --font-code: "Cascadia Code", Consolas, "DejaVu Sans Mono", monospace;      /* shell commands and paths only */
+
+  --fs-meta: 0.875rem;        /* 14px, the floor: nothing smaller anywhere */
+  --fs-small: 0.9375rem;      /* 15px, secondary lines */
+  --fs-body: 1.0625rem;       /* 17px, UI body */
+  --fs-transcript: 1.125rem;  /* 18px, transcript text */
+  --fs-heading: 1.375rem;     /* 22px, section headings */
+  --fs-title: 1.875rem;       /* 30px, page and meeting titles */
+  --fs-time: 2.25rem;         /* 36px, schedule times (slot face, tabular) */
+  --fs-display: 2.75rem;      /* 44px, the home drop slot headline */
+
+  --lh-tight: 1.15;
+  --lh-body: 1.55;
+  --lh-transcript: 1.65;
+  --measure: 72ch;
+
+  /* ---- space (4px base) ---- */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px;
+  --page-max: 1200px;
+  --masthead-h: 64px;
+  --target: 44px;             /* minimum height of anything clickable */
+
+  /* ---- shape: listings are square-cut; only controls soften ---- */
+  --r-slot: 3px;
+  --r-control: 6px;
+  --r-panel: 8px;
+
+  /* ---- motion ---- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);  /* exponential ease-out */
+  --t-fast: 140ms;
+  --t-ui: 220ms;
+
+  /* ---- elevation: tight, neutral; only menus and dialogs float ---- */
+  --shadow-pop: 0 2px 6px rgb(17 26 46 / 0.16);
+  --shadow-modal: 0 4px 10px rgb(17 26 46 / 0.22);
+
+  /* ---- colour: light (default) ---- */
+  --paper: #f4f5f7;           /* page ground */
+  --sheet: #ffffff;           /* work surfaces: schedule, transcript, settings modal */
+  --rule: #d3d8e2;            /* hairlines and slot outlines */
+  --rule-strong: #aeb7c8;
+  --ink: #111a2e;             /* primary text */
+  --ink-2: #4a5670;           /* secondary text */
+
+  --masthead: #12306b;        /* broadcast navy shell */
+  --on-masthead: #ffffff;
+  --on-masthead-2: #c3cfeb;
+
+  --action: #12306b;          /* the one reversed plate per screen */
+  --on-action: #ffffff;
+  --action-hover: #1b3f86;
+
+  --on-air: #c81e24;          /* playhead, live lamp; also failure (with icon + struck form) */
+  --on-air-soft: #fbe6e6;
+  --next: #8a5a00;            /* queued / waiting (text) */
+  --next-fill: #f2b632;       /* queued slot outline and lamp */
+  --processing: #12306b;      /* processing stripes */
+  --processing-soft: #dfe6f5;
+
+  --focus: #f2b632;           /* focus ring, visible on navy and paper */
+  --selection: #c9d6f2;
+  --hit: #fff1c2;             /* search-hit highlight */
+
+  /* speakers: text-safe on --sheet and --paper (>= 4.5:1) */
+  --spk-0: #1f5fd1; --spk-1: #0b7a5c; --spk-2: #a34a06; --spk-3: #a8238f;
+  --spk-4: #0b6f86; --spk-5: #6a3bd0; --spk-6: #b93a0a; --spk-7: #4b7a0c;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0b1730; --sheet: #11203f; --rule: #2a3d68; --rule-strong: #3d5590;
+    --ink: #eef2fb; --ink-2: #a9b6d3;
+    --masthead: #060f24; --on-masthead: #ffffff; --on-masthead-2: #a9b6d3;
+    --action: #c9d6f2; --on-action: #0b1730; --action-hover: #dbe4f7;
+    --on-air: #ff5a5c; --on-air-soft: #3a1426;
+    --next: #f2b632; --next-fill: #f2b632;
+    --processing: #79a7ff; --processing-soft: #18305e;
+    --focus: #f2b632; --selection: #2a4a8a; --hit: #4a3c0e;
+    --spk-0: #79a7ff; --spk-1: #3fd0a4; --spk-2: #f0a840; --spk-3: #f080dc;
+    --spk-4: #5ccfe0; --spk-5: #b79bff; --spk-6: #ff8f66; --spk-7: #a8d860;
+    --shadow-pop: 0 2px 6px rgb(0 0 0 / 0.45); --shadow-modal: 0 4px 10px rgb(0 0 0 / 0.55);
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0b1730; --sheet: #11203f; --rule: #2a3d68; --rule-strong: #3d5590;
+  --ink: #eef2fb; --ink-2: #a9b6d3;
+  --masthead: #060f24; --on-masthead: #ffffff; --on-masthead-2: #a9b6d3;
+  --action: #c9d6f2; --on-action: #0b1730; --action-hover: #dbe4f7;
+  --on-air: #ff5a5c; --on-air-soft: #3a1426;
+  --next: #f2b632; --next-fill: #f2b632;
+  --processing: #79a7ff; --processing-soft: #18305e;
+  --focus: #f2b632; --selection: #2a4a8a; --hit: #4a3c0e;
+  --spk-0: #79a7ff; --spk-1: #3fd0a4; --spk-2: #f0a840; --spk-3: #f080dc;
+  --spk-4: #5ccfe0; --spk-5: #b79bff; --spk-6: #ff8f66; --spk-7: #a8d860;
+  --shadow-pop: 0 2px 6px rgb(0 0 0 / 0.45); --shadow-modal: 0 4px 10px rgb(0 0 0 / 0.55);
+}
+
+/* ---- browser surfaces carry the design too ---- */
+html { background: var(--paper); }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 400 var(--fs-body)/var(--lh-body) var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--selection); color: var(--ink); }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+a { color: inherit; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
+input, select, textarea, button { font: inherit; color: inherit; accent-color: var(--action); caret-color: var(--ink); }
+* { scrollbar-color: var(--rule-strong) transparent; }
+.tabular, time { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}

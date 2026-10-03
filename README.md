@@ -1,4 +1,4 @@
-# Meeting Transcriber
+# NoteRecall
 
 Turns long meeting recordings into accurate, speaker-labelled transcripts with
 summaries. Built for meetings in **Bahasa Melayu, English, or a mix of both**
@@ -16,24 +16,34 @@ leaves it**. A Google Gemini cloud engine is available as an opt-in alternative.
 
 ## Run it locally
 
-**Linux / macOS**
+**One step.** Windows: double-click `start.bat`. macOS / Linux: run `./start.sh`.
+No Python needs to be installed first. The launcher:
+
+1. installs [uv](https://docs.astral.sh/uv/) if it is missing;
+2. creates `.venv` with Python 3.12 (uv downloads Python itself);
+3. installs `requirements.txt` (includes a bundled ffmpeg via `imageio-ffmpeg`),
+   plus `requirements-gpu.txt` (~2.3 GB of CUDA libraries) **only** if
+   `nvidia-smi` finds an NVIDIA card;
+4. downloads the speaker models (~165 MB) into `models/` once (the whisper
+   model is fetched on first use, or from the in-app setup);
+5. starts the server on <http://127.0.0.1:8756> and opens your browser as soon
+   as the server responds.
+
+Running the launcher again on a ready machine skips straight to starting the
+server (a stamp in `.venv/` records the installed requirements).
+
+**Manual fallback**
 
 ```bash
-sudo apt install -y python3-venv ffmpeg     # Debian/Ubuntu
-./start.sh
+# install uv: https://docs.astral.sh/uv/getting-started/installation/
+uv venv --python 3.12
+uv pip install -r requirements.txt
+uv pip install -r requirements-gpu.txt     # NVIDIA GPU only
+# activate the venv, or call .venv/bin/python (Windows: .venv\Scripts\python.exe)
+python server.py
 ```
 
-`start.sh` creates the venv, installs `requirements.txt`, adds the CUDA
-libraries **only** if `nvidia-smi` finds a card, downloads the speaker models,
-and starts the server.
-
-**Windows**
-
-Double-click `start.bat`. It runs the app and assumes `.venv` already exists —
-on a fresh machine, open `/setup` and follow the per-step install instructions
-there.
-
-Then open <http://localhost:8756>.
+Then open <http://127.0.0.1:8756>.
 
 ### Requirements
 
@@ -41,9 +51,8 @@ Then open <http://localhost:8756>.
 Windows and Linux**, plus an **"Ask an AI to install this for me"** button that
 generates a prompt describing exactly what your machine is missing.
 
-- Any engine: Python 3.10+, `pip install -r requirements.txt`, ffmpeg.
-  That's CPU-ready (487 MB installed).
-- NVIDIA GPU only: also `pip install -r requirements-gpu.txt` (~2.3 GB of CUDA
+- Any engine: `requirements.txt` (CPU-ready). Python and ffmpeg come with it.
+- NVIDIA GPU only: also `requirements-gpu.txt` (~2.3 GB of CUDA
   libraries — skip it on CPU-only machines).
 
 **You do not need a GPU.** `large-v3` on 8 CPU threads does ~24 min per hour of
@@ -75,7 +84,7 @@ server {
     client_max_body_size 2g;
 
     # The only thing protecting the app.
-    auth_basic           "Meeting Transcriber";
+    auth_basic           "NoteRecall";
     auth_basic_user_file /etc/nginx/.htpasswd;
 
     location / {
@@ -201,7 +210,7 @@ More CPU threads is *slower*, not faster — the cap of 8 is deliberate, see
 | `engines.py` | Cloud: chunking, Gemini, VAD timing layout |
 | `summarizer.py` | Ollama or extractive summaries |
 | `config.py` | `config.json` load/save |
-| `static/` | `index.html` (app), `setup.html`, `about.html` |
+| `static/` | `index.html` (single-page app), `css/`, `js/`, `i18n/` (en, ms), vendored `fonts/`, `icons/`, `vendor/` |
 | `requirements.txt` / `requirements-gpu.txt` | CPU deps / CUDA deps |
 | `start.sh` / `start.bat` | Launchers |
 | `docs/` | summary, nginx deployment, WSL testing |

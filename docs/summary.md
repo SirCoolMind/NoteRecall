@@ -1,4 +1,4 @@
-# Meeting Transcriber — Project Summary
+# NoteRecall — Project Summary
 
 A local-first web app that turns long meeting recordings (1–2 hours) into
 accurate, speaker-labelled transcripts with automatic summaries. Built for
@@ -246,8 +246,7 @@ fastest setting and the one that keeps the machine usable during a job.
 | `summarizer.py` | Ollama or extractive summaries (Malay/English aware) |
 | `config.py` | `config.json` load/save (engine, key, device, model) |
 | `static/index.html` | The app UI (meeting list, transcript detail) |
-| `static/setup.html` | `/setup` — requirements check, install steps, engine settings |
-| `static/about.html` | `/about` — project & architecture explainer |
+| `static/js/settings.js`, `static/js/setup.js` | Settings drawer: engine, defaults, setup checks, one-click install, about (`/setup` and `/about` redirect here) |
 | `requirements.txt` | Core + local engine, CPU-ready (487 MB installed) |
 | `requirements-gpu.txt` | CUDA libraries (~2.3 GB) — NVIDIA GPUs only |
 | `start.bat`, `start.sh` | Launch scripts (Windows / Linux+macOS) |

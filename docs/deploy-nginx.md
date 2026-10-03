@@ -75,7 +75,7 @@ sudo chown -R meetings: /opt/meeting-transcriber
 
 ```ini
 [Unit]
-Description=Meeting Transcriber
+Description=NoteRecall
 After=network.target
 
 [Service]
@@ -140,7 +140,7 @@ server {
     client_body_timeout  600s;
 
     # The app has no login of its own. This is the only thing protecting it.
-    auth_basic           "Meeting Transcriber";
+    auth_basic           "NoteRecall";
     auth_basic_user_file /etc/nginx/.htpasswd;
 
     access_log /var/log/nginx/meetings.access.log;

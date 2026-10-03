@@ -10,16 +10,11 @@ from pathlib import Path
 
 import numpy as np
 
+import ffmpeg_tools
+
 BASE_DIR = Path(__file__).parent
 MODELS_DIR = BASE_DIR / "models"
-FFMPEG = os.environ.get("FFMPEG_EXE", "ffmpeg")
-if not shutil.which(FFMPEG) and os.name == "nt":
-    # Windows has no package manager to put ffmpeg on PATH; try a known unzip spot
-    for _p in (Path(r"C:\Users\hafiz\Desktop\Playground\ffmpeg-8.0-full_build\bin\ffmpeg.exe"),
-               BASE_DIR / "ffmpeg" / "bin" / "ffmpeg.exe"):
-        if _p.exists():
-            FFMPEG = str(_p)
-            break
+FFMPEG = ffmpeg_tools.ffmpeg_exe()
 
 SEG_MODEL = MODELS_DIR / "sherpa-onnx-pyannote-segmentation-3-0" / "model.onnx"
 EMB_MODEL = MODELS_DIR / "nemo_en_titanet_large.onnx"

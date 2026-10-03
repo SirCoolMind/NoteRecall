@@ -1,412 +1,1049 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Meeting Transcriber</title>
-<style>
-:root{
-  --bg:#0f1115; --panel:#181b22; --panel2:#1f232d; --border:#2a2f3a;
-  --text:#e8eaf0; --dim:#9aa3b2; --accent:#4f8cff; --accent2:#37d0a0;
-  --danger:#ff5d5d;
-  --spk0:#4f8cff; --spk1:#37d0a0; --spk2:#f0a840; --spk3:#e06ad0;
-  --spk4:#6adade; --spk5:#b98aff; --spk6:#ff8a65; --spk7:#9ccc65;
-}
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font:15px/1.55 'Segoe UI',system-ui,sans-serif;min-height:100vh}
-a{color:var(--accent)}
-header{display:flex;align-items:center;gap:12px;padding:14px 24px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:5}
-header h1{font-size:18px;font-weight:600;cursor:pointer}
-header .badge{font-size:12px;color:var(--dim);background:var(--panel2);padding:3px 10px;border-radius:20px}
-main{max-width:1000px;margin:0 auto;padding:24px}
-.card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px}
-/* upload */
-#drop{border:2px dashed var(--border);border-radius:12px;padding:34px;text-align:center;color:var(--dim);cursor:pointer;transition:.15s}
-#drop.hover,#drop:hover{border-color:var(--accent);color:var(--text);background:var(--panel2)}
-#drop strong{color:var(--text)}
-.uprow{display:flex;gap:10px;margin-top:12px;flex-wrap:wrap}
-input[type=text],select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 12px;font-size:14px;outline:none}
-input[type=text]:focus,select:focus{border-color:var(--accent)}
-input[type=text]{flex:1;min-width:180px}
-button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 16px;font-size:14px;cursor:pointer;font-weight:500}
-button:hover{filter:brightness(1.12)}
-button.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--border)}
-button.danger{background:transparent;color:var(--danger);border:1px solid var(--danger)}
-button:disabled{opacity:.45;cursor:default}
-/* list */
-.meeting{display:flex;align-items:center;gap:14px;cursor:pointer}
-.meeting:hover{border-color:var(--accent)}
-.meeting .info{flex:1;min-width:0}
-.meeting .title{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.meeting .sub{color:var(--dim);font-size:13px;margin-top:2px}
-.status{font-size:12px;padding:4px 10px;border-radius:20px;white-space:nowrap}
-.status.done{background:#173527;color:var(--accent2)}
-.status.error{background:#3a1d1d;color:var(--danger)}
-.status.working{background:#1d2a44;color:var(--accent)}
-.pbar{height:5px;background:var(--panel2);border-radius:3px;margin-top:8px;overflow:hidden}
-.pbar>div{height:100%;background:var(--accent);transition:width .5s;border-radius:3px}
-/* detail */
-.tabs{display:flex;gap:6px;margin:14px 0}
-.tabs button{background:var(--panel2);color:var(--dim);border:1px solid var(--border)}
-.tabs button.active{background:var(--accent);color:#fff;border-color:var(--accent)}
-.seg{display:flex;gap:12px;padding:9px 10px;border-radius:8px;cursor:pointer}
-.seg:hover{background:var(--panel2)}
-.seg .ts{color:var(--dim);font-size:12px;min-width:52px;padding-top:3px;font-variant-numeric:tabular-nums}
-.seg .who{font-weight:600;min-width:100px;max-width:160px;font-size:13px;padding-top:2px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.seg .who:hover{text-decoration:underline}
-.seg .txt{flex:1}
-.seg.hit .txt{background:#3a3413;border-radius:4px}
-#summary{line-height:1.7}
-#summary h2{font-size:16px;margin:18px 0 8px;color:var(--accent)}
-#summary ul{padding-left:22px}
-#summary blockquote{color:var(--dim);border-left:3px solid var(--border);padding-left:12px;margin-top:16px;font-size:13px}
-/* floating player: stays visible while scrolling the transcript */
-#playerbar{position:sticky;top:53px;z-index:4;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:8px 14px;margin:10px 0;box-shadow:0 6px 18px #0007}
-#playerbar audio{width:100%;display:block}
-#playerbar .nowplaying{font-size:12px;color:var(--dim);padding:2px 2px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#playerbar .nowplaying b{color:var(--accent)}
-.seg.active{background:#1d2a44;outline:1px solid var(--accent)}
-/* setup page */
-.check{display:flex;gap:12px;align-items:baseline;padding:8px 6px;border-bottom:1px solid var(--border)}
-.check:last-child{border-bottom:0}
-.check .ic{font-size:15px;min-width:20px}
-.check .nm{font-weight:600;min-width:240px}
-.check .dt{color:var(--dim);font-size:13px;flex:1}
-.check .hint{color:#f0a840;font-size:12px}
-.arch-stage{display:flex;gap:12px;padding:10px 6px;border-bottom:1px solid var(--border)}
-.arch-stage:last-child{border-bottom:0}
-.arch-stage .st{font-weight:600;min-width:210px}
-.arch-stage .tech{color:var(--accent);font-size:13px;min-width:200px;max-width:260px}
-.arch-stage .ds{color:var(--dim);font-size:13px;flex:1}
-.radio-row{display:flex;gap:16px;margin:10px 0;flex-wrap:wrap}
-.radio-row label{display:flex;gap:8px;align-items:center;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:12px 16px;cursor:pointer;flex:1;min-width:260px}
-.radio-row label.sel{border-color:var(--accent)}
-.radio-row .big{font-weight:600}
-.radio-row .small{font-size:12px;color:var(--dim)}
-.warn{background:#3a2d13;border:1px solid #f0a84055;color:#f0c884;border-radius:8px;padding:10px 14px;font-size:13px;margin:10px 0}
-.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
-.toolbar .spacer{flex:1}
-#search{max-width:220px}
-.empty{text-align:center;color:var(--dim);padding:40px}
-.meta-line{color:var(--dim);font-size:13px}
-h2.pagetitle{font-size:22px;margin-bottom:2px;cursor:pointer}
-h2.pagetitle:hover::after{content:" ✎";color:var(--dim);font-size:14px}
-dialog{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:12px;padding:22px;min-width:320px}
-dialog::backdrop{background:#0009}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>NoteRecall</title>
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="stylesheet" href="/static/css/meeting.css">
+  <link rel="stylesheet" href="/static/css/setup.css">
+  <script src="/static/js/boot.js"></script>
+  <!-- Document order matters: app.js registers on alpine:init, then Alpine starts. -->
+  <script type="module" src="/static/js/app.js"></script>
+  <script defer src="/static/vendor/alpine.min.js"></script>
 </head>
-<body>
-<header>
-  <h1 onclick="showList()">🎙️ Meeting Transcriber</h1>
-  <span class="badge" id="device">loading…</span>
-  <span class="badge" id="summarizer-badge"></span>
-  <span class="badge" id="engine-badge"></span>
-  <div style="flex:1"></div>
-  <a class="ghost" href="/about" style="text-decoration:none;padding:8px 16px;border-radius:8px;background:var(--panel2);border:1px solid var(--border);color:var(--text);font-size:14px" title="What this is, and how it works">ℹ️ About</a>
-  <a class="ghost" href="/setup" style="text-decoration:none;padding:8px 16px;border-radius:8px;background:var(--panel2);border:1px solid var(--border);color:var(--text);font-size:14px" title="Setup & requirements">⚙ Setup</a>
-</header>
+<body x-data="shell" x-cloak>
+  <a class="skip-link" href="#view" x-text="$t('app.skip')"></a>
 
-<main>
-  <!-- LIST VIEW -->
-  <div id="view-list">
-    <div class="card">
-      <div id="drop">
-        <strong>Drop audio file here</strong> or click to choose<br>
-        <span style="font-size:13px">mp3 · wav · m4a · mp4 · ogg — up to 2+ hour meetings</span>
-        <input type="file" id="file" accept="audio/*,video/mp4,.m4a" hidden>
+  <div class="shell">
+    <header class="masthead">
+      <div class="masthead__inner">
+        <div class="masthead__lead">
+          <a class="wordmark" href="/" x-text="$t('app.name')"></a>
+          <a class="masthead__back" href="#/" x-show="$store.route.id" x-cloak>
+            <span x-icon="'chevron-left'"></span><span x-text="$t('meeting.back')"></span>
+          </a>
+        </div>
+
+        <div class="masthead__tools">
+          <div class="seg" role="group" :aria-label="$t('lang.group')">
+            <button type="button" class="seg__btn" lang="ms"
+                    :aria-pressed="$store.i18n.lang === 'ms'" :aria-label="$t('lang.ms')" :title="$t('lang.ms')"
+                    @click="$store.i18n.set('ms')" x-text="$t('lang.ms.short')"></button>
+            <button type="button" class="seg__btn" lang="en"
+                    :aria-pressed="$store.i18n.lang === 'en'" :aria-label="$t('lang.en')" :title="$t('lang.en')"
+                    @click="$store.i18n.set('en')" x-text="$t('lang.en.short')"></button>
+          </div>
+
+          <button type="button" class="icon-btn"
+                  :aria-label="$store.theme.effective === 'dark' ? $t('theme.to_light') : $t('theme.to_dark')"
+                  :title="$store.theme.effective === 'dark' ? $t('theme.to_light') : $t('theme.to_dark')"
+                  @click="$store.theme.toggle()">
+            <span x-icon="$store.theme.effective === 'dark' ? 'sun' : 'moon'"></span>
+          </button>
+
+          <button type="button" class="icon-btn" x-ref="gear"
+                  aria-haspopup="dialog" aria-controls="settings-modal" :aria-expanded="modalOpen"
+                  :aria-label="$t('settings.open')" :title="$t('settings.open')"
+                  @click="openModal()">
+            <span x-icon="'settings'"></span>
+          </button>
+        </div>
       </div>
-      <div class="uprow">
-        <input type="text" id="title" placeholder="Meeting title (optional)">
-        <select id="lang">
-          <option value="">Auto (Malay/English)</option>
-          <option value="ms">Bahasa Melayu</option>
-          <option value="en">English</option>
-        </select>
-        <select id="nspk">
-          <option value="0">Speakers: auto</option>
-          <option>2</option><option>3</option><option>4</option>
-          <option>5</option><option>6</option><option>7</option><option>8</option>
-        </select>
-        <button id="upbtn" disabled>Transcribe</button>
+    </header>
+
+    <main id="view" class="view" tabindex="-1">
+      <div class="page" x-show="!$store.route.id">
+        <div data-mount="setup-panel" x-data="{ s: $store.setup }">
+        <p class="setup-line" x-show="s.ready" x-cloak>
+          <span x-icon="'check'"></span>
+          <span class="setup-line__text" x-text="s.readyText"></span>
+          <a class="setup-line__link" href="#settings/checks" x-text="$t('setup.ready.details')"></a>
+        </p>
+
+        <section class="setup" x-show="s.blocked" x-cloak aria-labelledby="setup-title">
+          <div class="setup__head">
+            <div class="setup__intro">
+              <h2 class="setup__title" id="setup-title" x-text="$t('setup.title')"></h2>
+              <p class="setup__lead" x-text="(s.canInstall || s.running) ? $t('setup.lead') : $t('setup.lead.manual')"></p>
+              <p class="setup__count tabular" x-text="s.countText"></p>
+            </div>
+            <div class="setup__act">
+              <button type="button" class="plate-btn" x-show="s.canInstall || s.running" :disabled="s.running" :aria-busy="s.running"
+                      @click="s.start()" x-text="s.running ? $t('setup.all.busy') : $t('setup.all')"></button>
+              <button type="button" class="plate-btn" x-show="!(s.canInstall || s.running)" @click="s.refresh()" x-text="$t('setup.recheck')"></button>
+            </div>
+          </div>
+          <p class="setup__err" x-show="s.startError" x-cloak role="alert">
+            <span x-icon="'alert-triangle'"></span><span x-text="$t('setup.error.start')"></span>
+          </p>
+          <ul class="setup__list">
+            <template x-for="r in s.missing" :key="r.id">
+              <li class="srow" :class="'srow--' + s.kind(r)">
+                <div class="srow__main">
+                  <div class="srow__text">
+                    <span class="srow__name" x-text="r.name"></span>
+                    <span class="srow__why" x-text="$t('setup.why.' + r.id)"></span>
+                  </div>
+                  <div class="srow__state">
+                    <span class="pill" :class="'pill--' + ({ pending: 'queued', running: 'processing', done: 'ready', failed: 'failed' }[s.kind(r)] || 'idle')">
+                      <span x-icon="s.kind(r) === 'done' ? 'check' : 'alert-triangle'" x-show="s.kind(r) === 'done' || s.kind(r) === 'failed'"></span>
+                      <span x-text="$t('setup.state.' + s.kind(r))"></span>
+                    </span>
+                    <button type="button" class="btn" x-show="s.kind(r) === 'failed'" x-cloak
+                            :aria-label="$t('setup.retry.aria', { name: r.name })" @click="s.retry(r.id)">
+                      <span x-icon="'rotate-ccw'"></span><span x-text="$t('setup.retry')"></span>
+                    </button>
+                  </div>
+                </div>
+            
+                <div class="srow__prog" x-show="s.kind(r) === 'running'" x-cloak>
+                  <div class="bar" :class="{ 'bar--wait': s.progressPct(r) === null }" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                       :aria-valuenow="s.progressPct(r)" :aria-label="$t('setup.progress', { name: r.name })">
+                    <div class="bar__fill" :style="{ width: (s.progressPct(r) === null ? 100 : s.progressPct(r)) + '%' }"></div>
+                  </div>
+                  <span class="srow__meta tabular" x-text="(s.progressPct(r) === null ? '' : s.progressPct(r) + '% ') + s.detailText(r)"></span>
+                </div>
+            
+                <p class="srow__error" x-show="s.kind(r) === 'failed'" x-cloak>
+                  <span x-icon="'alert-triangle'"></span><span x-text="s.detailText(r)"></span>
+                </p>
+            
+                <div class="srow__more">
+                  <button type="button" class="btn btn--text" :aria-expanded="!!s.expanded['home:' + r.id]" :aria-controls="'steps-home-' + r.id" @click="s.toggle('home:' + r.id)">
+                    <span x-text="$t('setup.steps.show')"></span><span x-icon="s.expanded['home:' + r.id] ? 'chevron-up' : 'chevron-down'"></span>
+                  </button>
+                </div>
+                <div class="srow__steps" :id="'steps-home-' + r.id" x-show="s.expanded['home:' + r.id]" x-cloak>
+                  <h3 class="srow__os" x-text="$t('setup.steps.title', { os: $t('setup.os.' + s.os) })"></h3>
+                  <p class="srow__none" x-show="!r.steps.length" x-text="$t('setup.steps.none')"></p>
+                  <p class="srow__where" x-show="r.steps.some((st) => st.cmd)" x-text="$t('setup.steps.where')"></p>
+                  <ol class="steps">
+                    <template x-for="(st, i) in r.steps" :key="i">
+                      <li class="step">
+                        <span class="step__do" x-text="s.stepText(r, i, st)"></span>
+                        <div class="step__cmd" x-show="st.cmd">
+                          <code class="step__code" x-text="st.cmd"></code>
+                          <button type="button" class="btn step__copy" :aria-label="$t('setup.copy.aria', { n: i + 1 })" @click="s.copy(r.id, i, st.cmd)">
+                            <span x-text="s.copied === r.id + ':' + i ? $t('setup.copied') : $t('setup.copy')"></span>
+                          </button>
+                        </div>
+                      </li>
+                    </template>
+                  </ol>
+                </div>
+              </li>
+            </template>
+          </ul>
+        </section>
+        <div class="sr-only" role="status" aria-live="polite" x-text="s.announcement"></div>
       </div>
-      <div id="upstatus" class="meta-line" style="margin-top:8px"></div>
-    </div>
-    <div id="list"></div>
+
+        <section class="home" x-data="home" x-show="!$store.route.id" aria-labelledby="drop-title"
+                 @dragover.window.prevent @drop.window.prevent @settings-defaults.window="applyDefaults($event.detail)">
+          <div class="drop-slot" :class="{ 'is-over': dragging, 'is-busy': uploading, 'is-locked': locked }" role="group" aria-labelledby="drop-title" :aria-disabled="locked"
+               @dragenter.prevent="dragging = true" @dragover.prevent="dragging = true"
+               @dragleave="onDragLeave($event)" @drop.prevent="onDrop($event)" @click="onSlotClick($event)">
+            <span class="drop-slot__icon" x-icon="'upload'"></span>
+            <h1 id="drop-title" class="drop-slot__title" x-text="$t('home.drop.title')"></h1>
+
+            <div class="drop-slot__pick">
+              <input type="file" x-ref="picker" multiple hidden :accept="accept" :aria-label="$t('home.drop.choose')" @change="onPick($event)">
+              <button type="button" class="plate-btn" :disabled="locked" @click="openPicker()" x-text="$t('home.drop.choose')"></button>
+              <p class="drop-slot__hint" x-text="locked ? $t('home.drop.locked') : $t('home.drop.hint')"></p>
+            </div>
+
+            <div class="drop-slot__options">
+              <div class="opt">
+                <span class="opt__name" id="opt-language" x-text="$t('home.opt.language')"></span>
+                <div x-segmented="{ labelledby: 'opt-language', options: $segOptions('language'), value: language, onChange: (v) => language = v, disabled: locked }"></div>
+              </div>
+              <div class="opt">
+                <span class="opt__name" id="opt-speakers" x-text="$t('home.opt.speakers')"></span>
+                <div x-segmented="{ labelledby: 'opt-speakers', options: $segOptions('speakers'), value: speakers, onChange: (v) => speakers = v, disabled: locked }"></div>
+              </div>
+            </div>
+
+            <div class="drop-slot__status" :class="{ 'is-idle': !uploading && !uploadNote }">
+              <div class="upload" x-show="uploading" x-cloak>
+                <p class="upload__line">
+                  <span class="upload__name" x-text="uploading ? $t('home.upload.uploading', { name: uploading.name }) : ''"></span>
+                  <span class="upload__pct tabular" x-text="uploading ? uploading.percent + '%' : ''"></span>
+                </p>
+                <div class="bar bar--plate" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                     :aria-valuenow="uploading ? uploading.percent : 0" :aria-label="$t('home.upload.progress')">
+                  <div class="bar__fill" :style="{ width: (uploading ? uploading.percent : 0) + '%' }"></div>
+                </div>
+                <p class="upload__more" x-show="pending.length" x-text="$t('home.upload.more', { n: pending.length })"></p>
+              </div>
+              <p class="note" :class="uploadNote ? 'note--' + uploadNote.kind : ''" x-show="uploadNote && !uploading" x-cloak>
+                <span class="note__icon" x-icon="uploadNote && uploadNote.kind === 'error' ? 'alert-triangle' : 'check'"></span>
+                <span x-text="uploadNote ? uploadNote.text : ''"></span>
+              </p>
+            </div>
+          </div>
+          <p class="privacy" x-text="$t('home.privacy')"></p>
+
+          <div class="sr-only" role="status" aria-live="polite" x-text="announcement"></div>
+
+          <div data-mount="schedule" x-show="loaded && items.length" x-cloak>
+            <p class="notice" x-show="offline" x-text="$t('schedule.offline')"></p>
+
+            <div class="toolbar" role="search" :aria-label="$t('schedule.toolbar')">
+              <div class="finder">
+                <span class="finder__icon" x-icon="'search'"></span>
+                <input type="search" class="finder__input" x-model.debounce.250ms="query" autocomplete="off" spellcheck="false"
+                       :aria-label="$t('schedule.search')" :placeholder="$t('schedule.search')">
+                <button type="button" class="finder__clear" x-show="query" x-cloak @click="query = ''"
+                        :aria-label="$t('schedule.search.clear')" :title="$t('schedule.search.clear')">
+                  <span x-icon="'x'"></span>
+                </button>
+              </div>
+              <div x-segmented="{ label: $t('schedule.filter.label'), options: statusOptions, value: status, onChange: (v) => setStatus(v) }"></div>
+              <p class="toolbar__count tabular" role="status" aria-live="polite" x-text="countText"></p>
+            </div>
+
+            <div class="empty" x-show="!groups.length" x-cloak>
+              <p class="empty__text" x-text="$t('schedule.empty')"></p>
+              <button type="button" class="btn" @click="clearFilters()" x-text="$t('schedule.clear')"></button>
+            </div>
+
+            <template x-for="g in groups" :key="g.key">
+              <section class="group" :aria-labelledby="'group-' + g.key">
+                <h2 class="group__title" :id="'group-' + g.key"><span x-text="groupTitle(g)"></span><span class="lamp" x-show="g.key === 'on_now' && g.items.some((m) => m.kind === 'processing')" x-cloak aria-hidden="true"></span></h2>
+                <ol class="rows">
+                  <template x-for="m in g.items" :key="m.id">
+                    <li class="row" :class="['row--' + m.kind, markedId === m.id ? 'is-marked' : '']" :data-row-id="m.id" @click="onRowClick(m, $event)">
+                      <div class="row__main">
+                        <span class="row__time tabular" :class="{ 'is-unknown': !hasLength(m) }"><span class="sr-only" x-text="$t('row.length_label')"></span><template x-for="(p, i) in slotParts(m)" :key="i"><span class="row__len"><span x-text="p.n"></span><span class="row__unit" x-text="p.u"></span></span></template><span x-show="!hasLength(m)" aria-hidden="true">—</span></span>
+
+                        <div class="row__body">
+                          <template x-if="editing !== m.id">
+                            <div class="row__titleline">
+                              <template x-if="m.kind === 'ready'"><a class="row__title row__open" :href="'#/m/' + m.id" :aria-label="$t('row.open', { title: m.title })" x-text="m.title"></a></template>
+                              <template x-if="m.kind !== 'ready'"><span class="row__title" x-text="m.title"></span></template>
+                              <button type="button" class="row__edit" :data-edit-for="m.id" @click.stop="startEdit(m.id, m.title)"
+                                      :aria-label="$t('row.edit', { title: m.title })" :title="$t('row.edit', { title: m.title })">
+                                <span x-icon="'pencil'"></span>
+                              </button>
+                            </div>
+                          </template>
+                          <template x-if="editing === m.id">
+                            <input type="text" class="row__input" x-model="draft" maxlength="200"
+                                   :aria-label="$t('row.title_label')"
+                                   x-init="$nextTick(() => { $el.focus(); $el.select(); })"
+                                   @click.stop @keydown.enter.prevent="commitEdit(m.id, m.title, true)"
+                                   @keydown.escape.stop.prevent="cancelEdit(m.id)" @blur="commitEdit(m.id, m.title)">
+                          </template>
+                          <p class="row__meta"><time :datetime="m.created" x-text="startStamp(m)"></time></p>
+                        </div>
+
+                        <p class="row__qs" :class="{ 'is-empty': !summaryText(m) }">
+                          <span class="row__qs-label" x-text="$t('row.quick')"></span>
+                          <span class="row__qs-text" x-text="summaryText(m) || $t('row.quick.none')"></span>
+                        </p>
+
+                        <div class="row__status">
+                          <template x-if="m.kind === 'queued'">
+                            <span class="pill pill--queued" x-text="$t('status.queued')"></span>
+                          </template>
+                          <template x-if="m.kind === 'processing'">
+                            <span class="pill pill--processing" x-text="$t('status.processing')"></span>
+                          </template>
+                          <template x-if="m.kind === 'ready'">
+                            <span class="pill pill--ready"><span x-icon="'check'"></span><span x-text="$t('status.ready')"></span></span>
+                          </template>
+                          <template x-if="m.kind === 'ready'">
+                            <a class="row__eye" :href="'#/m/' + m.id" :data-open-for="m.id"
+                               :aria-label="$t('row.open_btn', { title: m.title })" :title="$t('row.open_btn', { title: m.title })">
+                              <span x-icon="'eye'"></span>
+                            </a>
+                          </template>
+                          <template x-if="m.kind === 'failed'">
+                            <span class="pill pill--failed"><span x-icon="'alert-triangle'"></span><span x-text="$t('status.failed')"></span></span>
+                          </template>
+                        </div>
+                      </div>
+
+                      <template x-if="m.kind === 'processing'">
+                        <div class="row__live">
+                          <p class="row__stage">
+                            <span class="row__stagename" x-text="stageName(m)"></span>
+                            <span class="row__eta tabular" x-text="etaText(m)"></span>
+                          </p>
+                          <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                               :aria-valuenow="m.progress" :aria-label="stageName(m)">
+                            <div class="bar__fill" :style="{ width: m.progress + '%' }"></div>
+                          </div>
+                        </div>
+                      </template>
+
+                      <template x-if="m.kind === 'failed'">
+                        <div class="row__fail">
+                          <p class="row__error" x-text="errorText(m)"></p>
+                          <button type="button" class="btn" @click="retry(m)" :aria-label="$t('row.retry_for', { title: m.title })">
+                            <span x-icon="'refresh-cw'"></span><span x-text="$t('row.retry')"></span>
+                          </button>
+                        </div>
+                      </template>
+                    </li>
+                  </template>
+                </ol>
+              </section>
+            </template>
+
+            <div class="more-rows" x-show="schedule.left > 0" x-cloak>
+              <button type="button" class="btn btn--wide" @click="showMore()" x-text="$t('schedule.more', { n: schedule.left })"></button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="meeting" x-data="meeting" x-show="$store.route.id" x-cloak
+               @wheel.window.passive="userScrolled()" @touchmove.window.passive="userScrolled()"
+               @keydown.window="onWindowKey($event)" @pointerdown.window="onWindowPointer($event)">
+
+        <div class="meeting__head">
+          <div class="wrap">
+            <template x-if="meta">
+              <div class="mhead">
+                <div class="mhead__top">
+                  <div class="mhead__main">
+                    <template x-if="editing !== meta.id">
+                      <div class="mhead__line">
+                        <h1 class="mhead__title" x-text="meta.title"></h1>
+                        <button type="button" class="row__edit" :data-edit-for="meta.id" @click="startEdit(meta.id, meta.title)"
+                                :aria-label="$t('row.edit', { title: meta.title })" :title="$t('row.edit', { title: meta.title })">
+                          <span x-icon="'pencil'"></span>
+                        </button>
+                      </div>
+                    </template>
+                    <template x-if="editing === meta.id">
+                      <input type="text" class="mhead__input" x-model="draft" maxlength="200"
+                             :aria-label="$t('row.title_label')"
+                             x-init="$nextTick(() => { $el.focus(); $el.select(); })"
+                             @keydown.enter.prevent="commitEdit(meta.id, meta.title, true)"
+                             @keydown.escape.stop.prevent="cancelEdit(meta.id)" @blur="commitEdit(meta.id, meta.title)">
+                    </template>
+                  </div>
+
+                  <!-- The one overflow menu: the rare actions live here. -->
+                  <div class="more" x-show="kind === 'ready' || kind === 'failed'"
+                       @keydown.escape.stop="closeActions(true)" @click.outside="closeActions(false)">
+                    <button type="button" class="more__btn" x-ref="actionsBtn" aria-haspopup="menu" aria-controls="meeting-actions"
+                            :aria-expanded="actionsOpen" :aria-label="$t('action.more')" :title="$t('action.more')"
+                            @click="toggleActions()">
+                      <span x-icon="'more-horizontal'"></span>
+                    </button>
+                    <div class="menu" id="meeting-actions" role="menu" x-ref="actionsMenu" :aria-label="$t('action.more')"
+                         x-show="actionsOpen" x-cloak @keydown="onActionsKey($event)">
+                      <button type="button" class="menu__item" role="menuitem" tabindex="-1" @click="retranscribe()">
+                        <span x-icon="'refresh-cw'"></span><span x-text="$t('action.retranscribe')"></span>
+                      </button>
+                      <button type="button" class="menu__item" role="menuitem" tabindex="-1" x-show="canRework" @click="openRedetect()">
+                        <span x-icon="'users'"></span><span x-text="$t('action.rediarize')"></span>
+                      </button>
+                      <button type="button" class="menu__item" role="menuitem" tabindex="-1" x-show="canRework" :disabled="summaryBusy"
+                              @click="resummarize()">
+                        <span x-icon="'rotate-ccw'"></span><span x-text="$t('action.resummarize')"></span>
+                      </button>
+                      <button type="button" class="menu__item menu__item--danger" role="menuitem" tabindex="-1" @click="openDelete()">
+                        <span x-icon="'trash-2'"></span><span x-text="$t('action.delete')"></span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <p class="mhead__meta" x-text="metaLine"></p>
+                <p class="mnote mnote--error" role="alert" x-show="actionError" x-text="actionError"></p>
+                <div class="dnote" x-show="suspectSpeakers" x-cloak>
+                  <span class="dnote__icon" x-icon="'alert-triangle'"></span>
+                  <p class="dnote__text" x-text="$t('diar.warning', { n: speakerCount })"></p>
+                  <button type="button" class="btn dnote__btn" @click="openRedetect()">
+                    <span x-icon="'users'"></span><span x-text="$t('diar.action')"></span>
+                  </button>
+                </div>
+              </div>
+            </template>
+
+            <p class="mnote" x-show="state === 'loading'" x-text="$t('meeting.loading')"></p>
+            <p class="mnote" x-show="state === 'offline'" x-text="$t('schedule.offline')"></p>
+            <p class="mnote" x-show="state === 'missing'" x-text="$t('meeting.missing')"></p>
+
+            <div class="mwait" x-show="state === 'waiting'" x-cloak>
+              <p class="mwait__line">
+                <span class="pill" :class="'pill--' + kind">
+                  <span x-show="kind === 'failed'" x-icon="'alert-triangle'"></span>
+                  <span x-text="$t('status.' + kind)"></span>
+                </span>
+                <span class="mwait__stage" x-show="kind === 'processing'" x-text="stageName()"></span>
+              </p>
+              <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" x-show="kind === 'processing'"
+                   :aria-valuenow="meta ? meta.progress || 0 : 0" :aria-label="stageName()">
+                <div class="bar__fill" :style="{ width: (meta ? meta.progress || 0 : 0) + '%' }"></div>
+              </div>
+              <p class="mwait__text" x-show="kind !== 'failed'" x-text="$t('meeting.wait.' + kind)"></p>
+              <div class="row__fail mwait__fail" x-show="kind === 'failed'">
+                <p class="row__error" x-text="errorText()"></p>
+                <button type="button" class="btn" @click="retry()">
+                  <span x-icon="'refresh-cw'"></span><span x-text="$t('row.retry')"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <template x-if="state === 'ready'">
+          <div class="meeting__body">
+            <div class="ribbon" x-ref="ribbon">
+              <div class="wrap ribbon__inner">
+                <audio x-ref="audio" preload="metadata"></audio>
+
+                <button type="button" class="ribbon__play" @click="toggle()"
+                        :aria-label="playing ? $t('ribbon.pause') : $t('ribbon.play')" :title="playing ? $t('ribbon.pause') : $t('ribbon.play')">
+                  <span x-icon="playing ? 'pause' : 'play'"></span>
+                </button>
+
+                <p class="ribbon__clock tabular">
+                  <span x-text="fmt(now)"></span><span class="ribbon__of"> / </span><span x-text="fmt(total)"></span>
+                </p>
+
+                <div class="spk" @keydown.escape.stop="closeSpeakers(true)" @click.outside="closeSpeakers(false)">
+                  <button type="button" class="spk__btn" x-ref="speakersBtn" aria-haspopup="dialog" aria-controls="speakers-pop"
+                          :aria-expanded="speakersOpen" @click="toggleSpeakers()">
+                    <span x-icon="'users'"></span>
+                    <span x-text="$t('ribbon.speakers', { n: speakerCount })"></span>
+                  </button>
+                  <div class="spk__pop" id="speakers-pop" role="dialog" x-ref="speakersPop" x-show="speakersOpen" x-cloak
+                       :aria-label="$t('speakers.title')" @focusout="onSpeakersFocusOut($event)">
+                    <div class="spk__find" x-show="showSpeakerFilter">
+                      <span x-icon="'search'"></span>
+                      <input type="search" class="spk__filter" x-model="speakerFilter" autocomplete="off"
+                             :aria-label="$t('speakers.filter')" :placeholder="$t('speakers.filter')">
+                    </div>
+                    <ul class="spk__list">
+                      <template x-for="r in speakerRows" :key="r.speaker">
+                        <li class="spk__row">
+                          <template x-if="popRename !== r.speaker">
+                            <button type="button" class="spk__jump" @click="pickSpeaker(r.speaker)"
+                                    :title="$t('ribbon.chip_title', { speaker: r.name })">
+                              <span class="spk__swatch" :style="{ background: r.color }"></span>
+                              <span class="spk__name" :style="{ color: r.color }" x-text="r.name"></span>
+                              <span class="spk__meta tabular" x-text="r.meta"></span>
+                            </button>
+                          </template>
+                          <template x-if="popRename === r.speaker">
+                            <input type="text" class="spk__input" x-model="popDraft" maxlength="60"
+                                   :aria-label="$t('rename.input', { name: r.name })"
+                                   @keydown.enter.prevent="commitPopRename(r.speaker, true)"
+                                   @keydown.escape.stop.prevent="cancelPopRename(r.speaker)" @blur="commitPopRename(r.speaker)">
+                          </template>
+                          <button type="button" class="spk__edit" :data-rename-spk="r.speaker" x-show="r.speaker >= 0"
+                                  :aria-label="$t('rename.label', { name: r.name })" :title="$t('rename.label', { name: r.name })"
+                                  @mousedown.prevent @click="startPopRename(r.speaker)">
+                            <span x-icon="'pencil'"></span>
+                          </button>
+                        </li>
+                      </template>
+                    </ul>
+                    <p class="spk__none" x-show="!speakerRows.length" x-text="$t('speakers.none')"></p>
+                  </div>
+                </div>
+
+                <div class="track" x-ref="track" tabindex="0" role="slider" :aria-label="$t('ribbon.slider')"
+                     aria-valuemin="0" :aria-valuemax="Math.floor(total)" :aria-valuenow="now" :aria-valuetext="valueText"
+                     @click="onTrackClick($event)" @keydown="onTrackKey($event)">
+                  <div class="track__plot" x-ref="plot">
+                    <template x-for="t in ticks" :key="t.t">
+                      <span class="tick" :class="{ 'is-first': t.t === 0 }" :style="{ left: t.left + '%' }">
+                        <span class="tick__label tabular" x-text="t.label"></span>
+                      </span>
+                    </template>
+                    <template x-for="(l, n) in lanes" :key="l.speaker">
+                      <div class="lane" :style="laneStyle(n)" :title="laneTitle(l)">
+                        <template x-for="(b, k) in l.blocks" :key="k">
+                          <span class="block" :style="blockStyle(l, b)"></span>
+                        </template>
+                      </div>
+                    </template>
+                    <div class="playhead" x-ref="playhead"><span class="playhead__lamp"></span></div>
+                  </div>
+                </div>
+
+                <div class="split" @keydown.escape.stop="closeMenu(true)" @click.outside="closeMenu(false)">
+                  <a class="split__main" :href="exportHref" download>
+                    <span x-icon="'download'"></span><span x-text="$t('dl.button', { fmt: format })"></span>
+                  </a>
+                  <button type="button" class="split__more" x-ref="menuBtn" aria-haspopup="menu" :aria-expanded="menuOpen"
+                          :aria-label="$t('dl.formats')" :title="$t('dl.formats')" @click="toggleMenu()">
+                    <span x-icon="'chevron-down'"></span>
+                  </button>
+                  <div class="menu" role="menu" x-ref="menu" :aria-label="$t('dl.formats')" x-show="menuOpen" x-cloak
+                       @keydown="onMenuKey($event)">
+                    <template x-for="f in formats" :key="f">
+                      <button type="button" class="menu__item" role="menuitemradio" :aria-checked="f === format"
+                              :tabindex="f === format ? 0 : -1" @click="chooseFormat(f)">
+                        <span class="menu__check" :class="{ 'is-off': f !== format }" x-icon="'check'"></span>
+                        <span x-text="$t('dl.format.' + f)"></span>
+                      </button>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="wrap transcript">
+              <p class="mnote" role="alert" x-show="audioError" x-text="$t('meeting.audio_error')"></p>
+
+              <div class="tools">
+                <div class="tabs" role="tablist" :aria-label="$t('tabs.label')" @keydown="onTabKey($event)">
+                  <button type="button" class="tab" role="tab" id="tab-transcript" aria-controls="panel-transcript"
+                          :aria-selected="tab === 'transcript'" :tabindex="tab === 'transcript' ? 0 : -1"
+                          @click="selectTab('transcript')" x-text="$t('tab.transcript')"></button>
+                  <button type="button" class="tab" role="tab" id="tab-summary" aria-controls="panel-summary"
+                          :aria-selected="tab === 'summary'" :tabindex="tab === 'summary' ? 0 : -1"
+                          @click="selectTab('summary')" x-text="$t('tab.summary')"></button>
+                </div>
+
+                <div class="find" role="search" x-show="tab === 'transcript' && segments.length">
+                  <label class="find__box">
+                    <span x-icon="'search'"></span>
+                    <input type="search" class="find__input" x-ref="find" x-model.debounce.120ms="query" autocomplete="off" spellcheck="false"
+                           :placeholder="$t('find.placeholder')" :aria-label="$t('find.label')" @keydown="onFindKey($event)">
+                    <button type="button" class="find__btn" x-show="query" @click="clearSearch()"
+                            :aria-label="$t('find.clear')" :title="$t('find.clear')"><span x-icon="'x'"></span></button>
+                  </label>
+                  <template x-if="query.trim()">
+                    <div class="find__steps">
+                      <span class="find__count tabular" role="status" x-text="countText"></span>
+                      <button type="button" class="find__btn find__btn--edge" :disabled="!matchTotal" @click="stepMatch(-1)"
+                              :aria-label="$t('find.prev')" :title="$t('find.prev')"><span x-icon="'chevron-up'"></span></button>
+                      <button type="button" class="find__btn find__btn--edge" :disabled="!matchTotal" @click="stepMatch(1)"
+                              :aria-label="$t('find.next')" :title="$t('find.next')"><span x-icon="'chevron-down'"></span></button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+
+              <div id="panel-transcript" role="tabpanel" aria-labelledby="tab-transcript" x-show="tab === 'transcript'">
+                <p class="mnote" x-show="!segments.length" x-text="$t('transcript.empty')"></p>
+                <ol class="lines" x-show="segments.length">
+                  <template x-for="(seg, i) in segments" :key="i">
+                    <li class="line" :class="{ 'is-now': i === activeIdx, 'is-run': startsRun(i) }" :data-line="i"
+                        :aria-current="i === activeIdx ? 'true' : null" @click="onLineClick(i)">
+                      <button type="button" class="line__time tabular" @click.stop="onLineClick(i)"
+                              :aria-label="$t('transcript.seek', { time: fmt(seg.start) })" x-text="fmt(seg.start)"></button>
+                      <span class="line__who" :style="{ color: speakerColor(seg.speaker) }">
+                        <template x-if="startsRun(i) && seg.speaker >= 0 && renamingLine !== i">
+                          <button type="button" class="who" data-rename @click.stop="startRename(i)"
+                                  :aria-label="$t('rename.label', { name: speakerName(seg.speaker) })"
+                                  :title="$t('rename.label', { name: speakerName(seg.speaker) })" x-text="speakerName(seg.speaker)"></button>
+                        </template>
+                        <template x-if="renamingLine === i">
+                          <input type="text" class="who__input" x-model="nameDraft" maxlength="60"
+                                 :aria-label="$t('rename.input', { name: speakerName(seg.speaker) })"
+                                 x-init="$nextTick(() => { $el.focus(); $el.select(); })" @click.stop
+                                 @keydown.enter.prevent="commitRename(i, true)"
+                                 @keydown.escape.stop.prevent="cancelRename(i)" @blur="commitRename(i)">
+                        </template>
+                        <span class="who who--plain" x-show="startsRun(i) && seg.speaker < 0" x-text="speakerName(seg.speaker)"></span>
+                        <span class="sr-only" x-show="!startsRun(i)" x-text="speakerName(seg.speaker)"></span>
+                      </span>
+                      <span class="line__text">
+                        <template x-if="!matchLines[i]"><span x-text="seg.text"></span></template>
+                        <template x-if="matchLines[i]">
+                          <span><template x-for="(p, k) in matchLines[i]" :key="k"><span :class="p.n < 0 ? null : 'hit' + (p.n === current ? ' is-current' : '')" x-text="p.text"></span></template></span>
+                        </template>
+                      </span>
+                    </li>
+                  </template>
+                </ol>
+              </div>
+
+              <div id="panel-summary" class="summary" role="tabpanel" aria-labelledby="tab-summary" x-show="tab === 'summary'" x-cloak>
+                <div class="summary__busy" x-show="summaryBusy" role="status">
+                  <p class="summary__busyline">
+                    <span class="pill pill--processing"><span x-text="$t('status.processing')"></span></span>
+                    <span class="mwait__stage" x-text="$t('stage.summarizing')"></span>
+                  </p>
+                  <div class="bar"><div class="bar__fill" style="width: 100%"></div></div>
+                  <p class="mnote summary__hint" x-text="$t('summary.busy_hint')"></p>
+                </div>
+                <p class="mnote" x-show="!summaryBusy && !summaryBlocks.length" x-text="$t('summary.empty')"></p>
+                <div class="summary__body" x-show="!summaryBusy && summaryBlocks.length">
+                  <template x-for="(b, n) in summaryBlocks" :key="n">
+                    <div class="sblock">
+                      <template x-if="b.type === 'h'">
+                        <h2 class="sblock__h"><template x-for="(r, k) in b.inline" :key="k"><span><template x-if="r.href"><a class="sinline is-link" :href="r.href" target="_blank" rel="noopener noreferrer" x-text="r.text"></a></template><template x-if="r.code && !r.href"><code class="sinline is-code" x-text="r.text"></code></template><template x-if="!r.href && !r.code"><span class="sinline" :class="{ 'is-b': r.bold, 'is-i': r.italic }" x-text="r.text"></span></template></span></template></h2>
+                      </template>
+                      <template x-if="b.type === 'p'">
+                        <p class="sblock__p"><template x-for="(r, k) in b.inline" :key="k"><span><template x-if="r.href"><a class="sinline is-link" :href="r.href" target="_blank" rel="noopener noreferrer" x-text="r.text"></a></template><template x-if="r.code && !r.href"><code class="sinline is-code" x-text="r.text"></code></template><template x-if="!r.href && !r.code"><span class="sinline" :class="{ 'is-b': r.bold, 'is-i': r.italic }" x-text="r.text"></span></template></span></template></p>
+                      </template>
+                      <template x-if="b.type === 'quote'">
+                        <blockquote class="sblock__quote"><template x-for="(r, k) in b.inline" :key="k"><span><template x-if="r.href"><a class="sinline is-link" :href="r.href" target="_blank" rel="noopener noreferrer" x-text="r.text"></a></template><template x-if="r.code && !r.href"><code class="sinline is-code" x-text="r.text"></code></template><template x-if="!r.href && !r.code"><span class="sinline" :class="{ 'is-b': r.bold, 'is-i': r.italic }" x-text="r.text"></span></template></span></template></blockquote>
+                      </template>
+                      <template x-if="b.type === 'ul' || b.type === 'ol'">
+                        <ul class="sblock__list" :class="{ 'is-ol': b.type === 'ol' }">
+                          <template x-for="(item, j) in b.items" :key="j">
+                            <li><template x-for="(r, k) in item.inline" :key="k"><span><template x-if="r.href"><a class="sinline is-link" :href="r.href" target="_blank" rel="noopener noreferrer" x-text="r.text"></a></template><template x-if="r.code && !r.href"><code class="sinline is-code" x-text="r.text"></code></template><template x-if="!r.href && !r.code"><span class="sinline" :class="{ 'is-b': r.bold, 'is-i': r.italic }" x-text="r.text"></span></template></span></template></li>
+                          </template>
+                        </ul>
+                      </template>
+                      <template x-if="b.type === 'talk'">
+                        <ul class="talk" :aria-label="$t('summary.talk')">
+                          <template x-for="(r, j) in talkRows(b)" :key="j">
+                            <li class="talk__row">
+                              <span class="talk__name" :style="{ color: r.color }" x-text="r.name"></span>
+                              <span class="talk__track" aria-hidden="true"><span class="talk__fill" :style="{ width: r.percent + '%', background: r.color }"></span></span>
+                              <span class="talk__pct tabular" x-text="r.percent + '%'"></span>
+                              <span class="talk__min tabular" x-text="r.minutes"></span>
+                            </li>
+                          </template>
+                        </ul>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <dialog class="dialog" x-ref="redoDialog" aria-labelledby="redo-title" @close="afterDialog()">
+          <form method="dialog" class="dialog__form" @submit.prevent="confirmRedetect()">
+            <h2 class="dialog__title" id="redo-title" x-text="$t('redo.title')"></h2>
+            <p class="dialog__text" x-text="$t('redo.body')"></p>
+            <div class="field">
+              <span class="field__label" id="redo-count" x-text="$t('redo.count')"></span>
+              <div x-segmented="{ labelledby: 'redo-count', options: $segOptions('speakers'), value: redoCount, onChange: (v) => redoCount = v }"></div>
+            </div>
+            <div class="dialog__actions">
+              <button type="button" class="btn" @click="$refs.redoDialog.close()" x-text="$t('dialog.cancel')"></button>
+              <button type="submit" class="btn btn--solid"><span x-icon="'users'"></span><span x-text="$t('redo.go')"></span></button>
+            </div>
+          </form>
+        </dialog>
+
+        <dialog class="dialog" x-ref="delDialog" aria-labelledby="del-title" aria-describedby="del-body" @close="afterDialog()">
+          <div class="dialog__form">
+            <h2 class="dialog__title" id="del-title" x-text="$t('del.title')"></h2>
+            <div id="del-body">
+              <p class="dialog__text" x-text="$t('del.body', { title: meta ? meta.title : '' })"></p>
+              <ul class="dialog__list">
+                <li x-text="$t('del.audio')"></li>
+                <li x-text="$t('del.transcript')"></li>
+                <li x-text="$t('del.summary')"></li>
+              </ul>
+              <p class="dialog__text dialog__warn" x-text="$t('del.warn')"></p>
+            </div>
+            <div class="dialog__actions">
+              <button type="button" class="btn" autofocus @click="$refs.delDialog.close()" x-text="$t('dialog.cancel')"></button>
+              <button type="button" class="btn btn--danger" :disabled="busy" @click="confirmDelete()">
+                <span x-icon="'trash-2'"></span><span x-text="$t('del.go')"></span>
+              </button>
+            </div>
+          </div>
+        </dialog>
+      </section>
+    </main>
   </div>
 
-  <!-- DETAIL VIEW -->
-  <div id="view-detail" style="display:none">
-    <div class="toolbar">
-      <button class="ghost" onclick="showList()">← Back</button>
-      <div class="spacer"></div>
-      <button class="ghost" onclick="retranscribe()" title="Transcribe again with the engine selected in Setup">↻ Re-transcribe</button>
-      <button class="ghost" onclick="rediarize()" title="Re-run speaker detection only">↻ Re-detect speakers</button>
-      <button class="ghost" onclick="exportDoc('txt')">Export .txt</button>
-      <button class="ghost" onclick="exportDoc('md')">Export .md</button>
-      <button class="ghost" onclick="exportDoc('srt')">Export .srt</button>
-      <button class="danger" onclick="delMeeting()">Delete</button>
-    </div>
-    <h2 class="pagetitle" id="d-title" title="Click to rename"></h2>
-    <div class="meta-line" id="d-meta"></div>
-    <div id="playerbar">
-      <div class="nowplaying" id="nowplaying">▶ Click any dialogue line or the progress bar — the transcript follows the audio.</div>
-      <audio id="player" controls preload="metadata"></audio>
-    </div>
-    <div class="tabs">
-      <button id="tab-t" class="active" onclick="setTab('t')">Transcript</button>
-      <button id="tab-s" onclick="setTab('s')">Summary</button>
-      <input type="text" id="search" placeholder="Search transcript…" oninput="renderSegs()">
-    </div>
-    <div class="card" id="pane-t"><div id="segs"></div></div>
-    <div class="card" id="pane-s" style="display:none">
-      <div class="toolbar">
-        <span class="meta-line" id="sum-engine"></span>
-        <div class="spacer"></div>
-        <button class="ghost" onclick="resummarize()" id="resum">↻ Regenerate summary</button>
+  <dialog id="settings-modal" class="smodal" x-ref="modal" role="dialog" aria-modal="true" aria-labelledby="smodal-title"
+          @close="onModalClosed()" @click="onBackdrop($event)">
+    <header class="smodal__head">
+      <h2 id="smodal-title" class="smodal__title" x-text="$t('settings.title')"></h2>
+      <button type="button" class="icon-btn icon-btn--plain" x-ref="modalClose"
+              :aria-label="$t('settings.close')" :title="$t('settings.close')" @click="closeModal()">
+        <span x-icon="'x'"></span>
+      </button>
+    </header>
+
+    <div class="tabs-wrap" x-ref="tabsWrap">
+      <div class="tabs" role="tablist" :aria-label="$t('settings.tabs')" x-ref="tablist"
+           @keydown="onTabKey($event)" @scroll.passive="syncFades()">
+        <template x-for="id in tabIds" :key="id">
+          <button type="button" class="tab" role="tab" :id="'tab-' + id" :data-tab="id"
+                  :aria-selected="tab === id" :aria-controls="'panel-' + id" :tabindex="tab === id ? 0 : -1"
+                  @click="selectTab(id)" x-text="$t('set.tab.' + id)"></button>
+        </template>
       </div>
-      <div id="summary"></div>
     </div>
-  </div>
-</main>
 
-<dialog id="renameDlg">
-  <p id="renameLabel" style="margin-bottom:10px;font-weight:600"></p>
-  <input type="text" id="renameInput" style="width:100%">
-  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-    <button class="ghost" onclick="renameDlg.close()">Cancel</button>
-    <button onclick="renameOk()">Save</button>
-  </div>
-</dialog>
+    <div class="smodal__body" data-mount="settings" x-data="settings" @settings-open.window="onOpen($event.detail)">
+      <p class="dnote" x-show="loadFailed" x-cloak role="alert">
+        <span x-icon="'alert-triangle'"></span><span x-text="$t('set.load_failed')"></span>
+        <button type="button" class="btn" @click="loadConfig()" x-text="$t('set.retry')"></button>
+      </p>
 
-<script>
-const $=id=>document.getElementById(id);
-let current=null, pollTimer=null, renameCb=null;
+      <div class="tpanel" role="tabpanel" id="panel-general" aria-labelledby="tab-general" tabindex="0" x-show="tab === 'general'" x-cloak>
+      <!-- Defaults -->
+      <section class="dset" id="set-defaults" aria-labelledby="h-defaults">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-defaults" x-text="$t('set.defaults.title')"></h3>
+          <p class="fstate" :class="'is-' + sec.defaults.state" role="status" aria-live="polite">
+            <span x-icon="stateIcon('defaults')" x-show="sec.defaults.state !== 'idle'"></span>
+            <span x-text="stateText('defaults')"></span>
+            <button type="button" class="fstate__retry" x-show="sec.defaults.state === 'error'" @click="retry('defaults')" x-text="$t('set.retry')"></button>
+          </p>
+        </div>
+        <p class="dhint dhint--top" x-text="$t('set.defaults.hint')"></p>
 
-const STAGES={queued:'Queued',converting:'Converting audio',uploading:'Uploading to cloud',
-  transcribing:'Transcribing',diarizing:'Identifying speakers',summarizing:'Summarizing',
-  done:'Done',error:'Error'};
+        <div class="field">
+          <span class="field__label" id="set-lang" x-text="$t('home.opt.language')"></span>
+          <div x-segmented="{ labelledby: 'set-lang', options: $segOptions('language'), value: defaultLanguage, onChange: (v) => setDefaults('defaults', { default_language: v }) }"></div>
+        </div>
+      </section>
 
-function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
-function fmtDur(s){if(!s)return'';const m=Math.round(s/60);return m>=60?`${Math.floor(m/60)}h ${m%60}m`:`${m} min`}
-function fmtTs(s){const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=Math.floor(s%60),p=n=>String(n).padStart(2,'0');return h?`${h}:${p(m)}:${p(x)}`:`${m}:${p(x)}`}
-function spkColor(i){return i<0?'var(--dim)':`var(--spk${i%8})`}
-function spkName(meta,i){return i<0?'—':(meta.speaker_names?.[i]||`Speaker ${i+1}`)}
+      <!-- Interface -->
+      <section class="dset" id="set-interface" aria-labelledby="h-interface">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-interface" x-text="$t('set.ui.title')"></h3>
+          <p class="fstate" :class="'is-' + sec.interface.state" role="status" aria-live="polite">
+            <span x-icon="stateIcon('interface')" x-show="sec.interface.state !== 'idle'"></span>
+            <span x-text="stateText('interface')"></span>
+          </p>
+        </div>
 
-// ---------- status badge
-function loadBadges(){
-  fetch('/api/status').then(r=>r.json()).then(s=>{
-    // the local device only matters for the local engine
-    $('device').style.display=s.engine==='gemini'?'none':'';
-    $('device').textContent='⚙ '+s.device;
-    $('summarizer-badge').textContent=s.ollama_model?('🧠 '+s.ollama_model):'🧠 built-in summary';
-    $('engine-badge').textContent=s.engine==='gemini'?('☁️ '+s.gemini_model):'💻 local';
-  }).catch(()=>{});
-}
-loadBadges();
+        <fieldset class="choices choices--row">
+          <legend class="field__label" x-text="$t('lang.group')"></legend>
+          <label class="choice choice--short" :class="{ 'is-on': $store.i18n.lang === 'ms' }">
+            <input type="radio" name="uilang" :checked="$store.i18n.lang === 'ms'" @change="setLang('ms')">
+            <span class="choice__name" lang="ms" x-text="$t('lang.ms')"></span>
+          </label>
+          <label class="choice choice--short" :class="{ 'is-on': $store.i18n.lang === 'en' }">
+            <input type="radio" name="uilang" :checked="$store.i18n.lang === 'en'" @change="setLang('en')">
+            <span class="choice__name" lang="en" x-text="$t('lang.en')"></span>
+          </label>
+        </fieldset>
 
-// ---------- upload
-let pickedFile=null;
-$('drop').onclick=()=>$('file').click();
-$('file').onchange=e=>setFile(e.target.files[0]);
-['dragover','dragenter'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.add('hover')}));
-['dragleave','drop'].forEach(ev=>$('drop').addEventListener(ev,e=>{e.preventDefault();$('drop').classList.remove('hover')}));
-$('drop').addEventListener('drop',e=>setFile(e.dataTransfer.files[0]));
-function setFile(f){if(!f)return;pickedFile=f;
-  $('drop').innerHTML=`<strong>${esc(f.name)}</strong> · ${(f.size/1048576).toFixed(1)} MB — ready`;
-  $('upbtn').disabled=false;
-  if(!$('title').value)$('title').value=f.name.replace(/\.[^.]+$/,'');}
-$('upbtn').onclick=async()=>{
-  if(!pickedFile)return;
-  $('upbtn').disabled=true;$('upstatus').textContent='Uploading…';
-  const fd=new FormData();
-  fd.append('file',pickedFile);fd.append('title',$('title').value);
-  fd.append('language',$('lang').value);fd.append('num_speakers',$('nspk').value);
-  try{
-    const r=await fetch('/api/meetings',{method:'POST',body:fd});
-    if(!r.ok)throw new Error(await r.text());
-    $('upstatus').textContent='Queued for transcription ✓';
-    pickedFile=null;$('title').value='';
-    $('drop').innerHTML=`<strong>Drop audio file here</strong> or click to choose<br><span style="font-size:13px">mp3 · wav · m4a · mp4 · ogg</span><input type="file" id="file" accept="audio/*,video/mp4,.m4a" hidden>`;
-    document.querySelector('#drop input').onchange=e=>setFile(e.target.files[0]);
-    loadList();
-  }catch(e){$('upstatus').textContent='Upload failed: '+e.message;$('upbtn').disabled=false}
-};
+        <fieldset class="choices choices--row">
+          <legend class="field__label" x-text="$t('set.theme.label')"></legend>
+          <label class="choice choice--short" :class="{ 'is-on': $store.theme.mode === 'light' }">
+            <input type="radio" name="theme" :checked="$store.theme.mode === 'light'" @change="setTheme('light')">
+            <span class="choice__name" x-text="$t('set.theme.light')"></span>
+          </label>
+          <label class="choice choice--short" :class="{ 'is-on': $store.theme.mode === 'dark' }">
+            <input type="radio" name="theme" :checked="$store.theme.mode === 'dark'" @change="setTheme('dark')">
+            <span class="choice__name" x-text="$t('set.theme.dark')"></span>
+          </label>
+          <label class="choice choice--short" :class="{ 'is-on': $store.theme.mode === 'system' }">
+            <input type="radio" name="theme" :checked="$store.theme.mode === 'system'" @change="setTheme('system')">
+            <span class="choice__name" x-text="$t('set.theme.system')"></span>
+          </label>
+        </fieldset>
+      </section>
+      </div>
 
-// ---------- list
-async function loadList(){
-  let items;
-  try{
-    const r=await fetch('/api/meetings');
-    if(!r.ok)throw new Error(r.status);
-    items=await r.json();
-  }catch(e){schedulePoll(loadList);return}  // transient error: retry, never freeze
-  const el=$('list');
-  if(!items.length){el.innerHTML='<div class="empty">No meetings yet — upload your first recording above.</div>';return}
-  el.innerHTML=items.map(m=>{
-    const working=!['done','error'].includes(m.status);
-    const badge=m.status==='done'?`<span class="status done">✓ Done</span>`
-      :m.status==='error'?`<span class="status error">Error</span>`
-      :`<span class="status working">${STAGES[m.status]||m.status}… ${m.progress||0}%</span>`;
-    return `<div class="card meeting" onclick="openMeeting('${m.id}')">
-      <div class="info">
-        <div class="title">${esc(m.title)}</div>
-        <div class="sub">${m.created.replace('T',' ')}${m.duration?' · '+fmtDur(m.duration):''}
-          ${m.num_speakers_found?' · '+m.num_speakers_found+' speakers':''}
-          ${m.detected_language?' · '+m.detected_language.toUpperCase():''}</div>
-        ${working?`<div class="pbar"><div style="width:${m.progress||0}%"></div></div>`:''}
-      </div>${badge}</div>`;
-  }).join('');
-  if(items.some(m=>!['done','error'].includes(m.status)))schedulePoll(loadList);
-}
-function schedulePoll(fn){clearTimeout(pollTimer);pollTimer=setTimeout(fn,2500)}
+      <div class="tpanel" role="tabpanel" id="panel-transcription" aria-labelledby="tab-transcription" tabindex="0" x-show="tab === 'transcription'" x-cloak>
+      <!-- Engine -->
+      <section class="dset" id="set-engine" aria-labelledby="h-engine">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-engine" x-text="$t('set.engine.title')"></h3>
+          <p class="fstate" :class="'is-' + sec.engine.state" role="status" aria-live="polite">
+            <span x-icon="stateIcon('engine')" x-show="sec.engine.state !== 'idle'"></span>
+            <span x-text="stateText('engine')"></span>
+            <button type="button" class="fstate__retry" x-show="sec.engine.state === 'error'" @click="retry('engine')" x-text="$t('set.retry')"></button>
+          </p>
+        </div>
 
-// ---------- detail
-async function openMeeting(id){
-  clearTimeout(pollTimer);
-  let d;
-  try{
-    const r=await fetch('/api/meetings/'+id);
-    if(!r.ok)throw new Error(r.status);
-    d=await r.json();
-  }catch(e){schedulePoll(()=>openMeeting(id));return}  // retry, never freeze
-  current=d;
-  $('view-list').style.display='none';$('view-detail').style.display='';
-  $('d-title').textContent=d.meta.title;
-  const m=d.meta;
-  let info=`${m.created.replace('T',' ')} · ${fmtDur(m.duration)} · ${m.num_speakers_found||'?'} speakers · lang: ${(m.detected_language||'?').toUpperCase()}`;
-  if(!['done','error'].includes(m.status)){info+=` — <b style="color:var(--accent)">${STAGES[m.status]||m.status}… ${m.progress||0}%</b>`;schedulePoll(()=>openMeeting(id))}
-  if(m.status==='error')info+=` — <b style="color:var(--danger)">${esc(m.error||'failed')}</b>`;
-  $('d-meta').innerHTML=info;
-  $('player').src=`/api/meetings/${id}/audio`;
-  $('sum-engine').textContent=m.summary_engine?('engine: '+m.summary_engine):'';
-  renderSegs();renderSummary();
-}
-function renderSegs(){
-  if(!current)return;
-  const q=$('search').value.toLowerCase();
-  const meta=current.meta;
-  const el=$('segs');
-  if(!current.segments.length){el.innerHTML='<div class="empty">Transcript will appear here once processing finishes.</div>';return}
-  el.innerHTML=current.segments.map((s,i)=>{
-    if(q&&!s.text.toLowerCase().includes(q))return'';
-    return `<div class="seg${q?' hit':''}" id="seg-${i}" onclick="seekTo(${s.start})">
-      <span class="ts">${fmtTs(s.start)}</span>
-      <span class="who" style="color:${spkColor(s.speaker)}"
-        onclick="event.stopPropagation();renameSpeaker(${s.speaker})">${esc(spkName(meta,s.speaker))}</span>
-      <span class="txt">${esc(s.text)}</span></div>`;
-  }).join('');
-}
+        <fieldset class="choices">
+          <legend class="sr-only" x-text="$t('set.engine.group')"></legend>
+          <label class="choice" :class="{ 'is-on': engine === 'local' }">
+            <input type="radio" name="engine" :checked="engine === 'local'" @change="setEngine('local')">
+            <span class="choice__text">
+              <span class="choice__name" x-text="$t('set.engine.local')"></span>
+              <span class="choice__desc" x-text="$t('set.engine.local.desc')"></span>
+            </span>
+          </label>
+          <label class="choice" :class="{ 'is-on': engine === 'gemini' }">
+            <input type="radio" name="engine" :checked="engine === 'gemini'" @change="setEngine('gemini')">
+            <span class="choice__text">
+              <span class="choice__name" x-text="$t('set.engine.gemini')"></span>
+              <span class="choice__desc" x-text="$t('set.engine.gemini.desc')"></span>
+            </span>
+          </label>
+        </fieldset>
 
-// ---------- player <-> transcript sync
-let activeIdx=-1;
-function segAt(t){
-  if(!current)return -1;
-  const ss=current.segments;
-  for(let i=0;i<ss.length;i++){
-    if(t>=ss[i].start&&t<ss[i].end)return i;
-    if(ss[i].start>t)return Math.max(0,i-1);
-  }
-  return ss.length-1;
-}
-function highlightSeg(i,scroll){
-  if(i===activeIdx&&!scroll)return;
-  const prev=$('seg-'+activeIdx);if(prev)prev.classList.remove('active');
-  activeIdx=i;
-  const el=$('seg-'+i);
-  if(!el)return;
-  el.classList.add('active');
-  const s=current.segments[i];
-  $('nowplaying').innerHTML=`▶ <b>${fmtTs(s.start)}</b> · <b style="color:${spkColor(s.speaker)}">${esc(spkName(current.meta,s.speaker))}</b> — ${esc(s.text.slice(0,110))}`;
-  if(scroll)el.scrollIntoView({block:'center',behavior:'smooth'});
-}
-$('player').addEventListener('timeupdate',()=>{
-  if(!current||!current.segments.length)return;
-  highlightSeg(segAt($('player').currentTime),false);
-});
-// clicking the progress bar fires 'seeked' -> jump the transcript there too
-$('player').addEventListener('seeked',()=>{
-  if(!current||!current.segments.length)return;
-  highlightSeg(segAt($('player').currentTime),true);
-});
-function renderSummary(){
-  const md=current.summary||'_No summary yet._';
-  // minimal markdown render
-  let html=esc(md)
-    .replace(/^## (.+)$/gm,'<h2>$1</h2>')
-    .replace(/^# (.+)$/gm,'<h2>$1</h2>')
-    .replace(/^&gt; (.+)$/gm,'<blockquote>$1</blockquote>')
-    .replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')
-    .replace(/_([^_]+)_/g,'<i>$1</i>')
-    .replace(/\[([^\]]+)\]\((https?[^)]+)\)/g,'<a href="$2" target="_blank">$1</a>')
-    .replace(/^- (.+)$/gm,'<li>$1</li>')
-    .replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g,'<ul>$1</ul>')
-    .replace(/\n{2,}/g,'<br>');
-  $('summary').innerHTML=html;
-}
-function seekTo(t){const p=$('player');p.currentTime=t;p.play()}
-function setTab(t){
-  $('tab-t').classList.toggle('active',t==='t');$('tab-s').classList.toggle('active',t==='s');
-  $('pane-t').style.display=t==='t'?'':'none';$('pane-s').style.display=t==='s'?'':'none';
-}
-function showList(){clearTimeout(pollTimer);current=null;activeIdx=-1;
-  $('view-detail').style.display='none';
-  $('view-list').style.display='';loadList()}
+        <p class="dnote dnote--plain" x-show="engine === 'local'">
+          <span x-icon="'check'"></span><span x-text="$t('set.engine.local_note')"></span>
+        </p>
 
-// ---------- rename / delete / export / resummarize
-function askRename(label,initial,cb){
-  $('renameLabel').textContent=label;$('renameInput').value=initial;renameCb=cb;
-  $('renameDlg').showModal();$('renameInput').focus();
-}
-function renameOk(){$('renameDlg').close();if(renameCb)renameCb($('renameInput').value)}
-$('renameInput').addEventListener('keydown',e=>{if(e.key==='Enter')renameOk()});
+        <div x-show="engine === 'gemini'" x-cloak>
+          <div class="warn" role="note">
+            <span x-icon="'alert-triangle'"></span>
+            <p><strong x-text="$t('set.engine.gemini_warn_title')"></strong> <span x-text="$t('set.engine.gemini_warn')"></span></p>
+          </div>
+          <p class="dhint" x-text="$t('set.engine.gemini_only')"></p>
 
-function renameSpeaker(i){
-  if(i<0)return;
-  askRename('Name for '+spkName(current.meta,i)+' (applies everywhere):',spkName(current.meta,i),async v=>{
-    if(!v.trim())return;
-    await fetch('/api/meetings/'+current.meta.id,{method:'PATCH',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({speaker_names:{[i]:v.trim()}})});
-    openMeeting(current.meta.id);
-  });
-}
-$('d-title').onclick=()=>{
-  askRename('Meeting title:',current.meta.title,async v=>{
-    if(!v.trim())return;
-    await fetch('/api/meetings/'+current.meta.id,{method:'PATCH',
-      headers:{'Content-Type':'application/json'},body:JSON.stringify({title:v.trim()})});
-    openMeeting(current.meta.id);
-  });
-};
-async function delMeeting(){
-  if(!confirm('Delete this meeting and its transcript permanently?'))return;
-  await fetch('/api/meetings/'+current.meta.id,{method:'DELETE'});
-  showList();
-}
-function exportDoc(fmt){location.href=`/api/meetings/${current.meta.id}/export?format=${fmt}`}
-async function retranscribe(){
-  if(!confirm('Transcribe this recording again using the engine currently selected in Setup?\n\nThe existing transcript will be replaced.'))return;
-  await fetch(`/api/meetings/${current.meta.id}/retranscribe`,{method:'POST'});
-  openMeeting(current.meta.id);
-}
-async function rediarize(){
-  const v=prompt('How many speakers were in this meeting?\nLeave empty for auto-detect.','');
-  if(v===null)return;
-  const n=parseInt(v)||0;
-  await fetch(`/api/meetings/${current.meta.id}/rediarize?num_speakers=${n}`,{method:'POST'});
-  openMeeting(current.meta.id);
-}
-async function resummarize(){
-  $('resum').disabled=true;$('resum').textContent='Working…';
-  try{
-    const r=await(await fetch(`/api/meetings/${current.meta.id}/resummarize`,{method:'POST'})).json();
-    current.summary=r.summary;$('sum-engine').textContent='engine: '+r.engine;renderSummary();
-  }finally{$('resum').disabled=false;$('resum').textContent='↻ Regenerate summary'}
-}
+          <div class="field">
+            <label class="field__label" for="set-key" x-text="$t('set.key.label')"></label>
+            <div class="field__row">
+              <input id="set-key" class="input" type="password" autocomplete="off" spellcheck="false"
+                     x-model="keyDraft" @input.debounce.700ms="saveKey()"
+                     :placeholder="hasKey ? $t('set.key.placeholder_replace') : $t('set.key.placeholder')">
+              <button type="button" class="btn" @click="testKey()" :disabled="keyTest && keyTest.state === 'testing'" x-text="$t('set.key.test')"></button>
+            </div>
+            <p class="dhint" x-text="hasKey ? $t('set.key.saved', { tail: keyTail }) : $t('set.key.none')"></p>
+            <p class="ktest" :class="keyTest ? 'is-' + keyTest.state : ''" role="status" aria-live="polite" x-show="keyTest" x-cloak>
+              <span x-icon="keyTestIcon"></span>
+              <span><span x-text="keyTestText"></span><span class="ktest__detail" x-show="keyTest && keyTest.detail" x-text="keyTest ? keyTest.detail : ''"></span></span>
+            </p>
+            <a class="dlink" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" x-text="$t('set.key.get')"></a>
+          </div>
 
-// legacy deep link from older bookmarks
-if(location.hash==='#setup') location.replace('/setup');
-else loadList();
-</script>
+          <div class="field">
+            <label class="field__label" for="set-model" x-text="$t('set.model.label')"></label>
+            <input id="set-model" class="input" type="text" autocomplete="off" spellcheck="false"
+                   x-model="geminiModel" @input.debounce.700ms="saveModel()">
+          </div>
+        </div>
+      </section>
+
+      <!-- Device and model -->
+      <section class="dset" id="set-device" aria-labelledby="h-device" x-show="engine === 'local'">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-device" x-text="$t('set.device.title')"></h3>
+          <p class="fstate" :class="'is-' + sec.device.state" role="status" aria-live="polite">
+            <span x-icon="stateIcon('device')" x-show="sec.device.state !== 'idle'"></span>
+            <span x-text="stateText('device')"></span>
+            <button type="button" class="fstate__retry" x-show="sec.device.state === 'error'" @click="retry('device')" x-text="$t('set.retry')"></button>
+          </p>
+        </div>
+
+        <fieldset class="choices">
+          <legend class="sr-only" x-text="$t('set.device.group')"></legend>
+          <label class="choice" :class="{ 'is-on': device === 'auto' }">
+            <input type="radio" name="device" :checked="device === 'auto'" @change="setDevice('auto')">
+            <span class="choice__text">
+              <span class="choice__name" x-text="$t('set.device.auto')"></span>
+              <span class="choice__desc" x-text="$t('set.device.auto.desc')"></span>
+            </span>
+          </label>
+          <label class="choice" :class="{ 'is-on': device === 'cpu' }">
+            <input type="radio" name="device" :checked="device === 'cpu'" @change="setDevice('cpu')">
+            <span class="choice__text">
+              <span class="choice__name" x-text="$t('set.device.cpu')"></span>
+              <span class="choice__desc" x-text="$t('set.device.cpu.desc')"></span>
+            </span>
+          </label>
+        </fieldset>
+
+        <div class="field">
+          <label class="field__label" for="set-whisper" x-text="$t('set.whisper.label')"></label>
+          <span class="select">
+            <select id="set-whisper" class="select__el" :value="whisperModel" @change="setWhisper($event.target.value)">
+              <template x-for="name in whisperChoices" :key="name">
+                <option :value="name" :selected="name === whisperModel" x-text="whisperLabel(name)"></option>
+              </template>
+            </select>
+            <span class="select__chevron" x-icon="'chevron-down'"></span>
+          </span>
+          <p class="dhint" x-show="whisperModel !== 'large-v3'" x-text="$t('set.whisper.warn')"></p>
+        </div>
+
+        <dl class="facts">
+          <div class="facts__row">
+            <dt x-text="$t('set.status.running')"></dt>
+            <dd x-text="runtimeText"></dd>
+          </div>
+          <div class="facts__row">
+            <dt x-text="$t('set.status.model')"></dt>
+            <dd x-text="modelText"></dd>
+          </div>
+        </dl>
+      </section>
+      </div>
+
+      <div class="tpanel" role="tabpanel" id="panel-speakers" aria-labelledby="tab-speakers" tabindex="0" x-show="tab === 'speakers'" x-cloak>
+      <section class="dset" id="set-spkmodel" aria-labelledby="h-spkmodel">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-spkmodel" x-text="$t('set.spk.title')"></h3>
+        </div>
+        <p class="dhint dhint--top" x-text="$t('set.spk.hint')"></p>
+        <ul class="models" :aria-label="$t('set.spk.title')">
+          <li class="model">
+            <span class="model__text">
+              <span class="model__name" x-text="$t('set.spk.model')"></span>
+              <span class="model__desc" x-text="$t('set.spk.model.desc')"></span>
+            </span>
+            <span class="pill pill--ready"><span x-icon="'check'"></span><span x-text="$t('set.model.active')"></span></span>
+          </li>
+        </ul>
+      </section>
+
+      <section class="dset" id="set-speakers-count" aria-labelledby="h-spkcount">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-spkcount" x-text="$t('set.spk.count.title')"></h3>
+          <p class="fstate" :class="'is-' + sec.speakers.state" role="status" aria-live="polite">
+            <span x-icon="stateIcon('speakers')" x-show="sec.speakers.state !== 'idle'"></span>
+            <span x-text="stateText('speakers')"></span>
+            <button type="button" class="fstate__retry" x-show="sec.speakers.state === 'error'" @click="retry('speakers')" x-text="$t('set.retry')"></button>
+          </p>
+        </div>
+        <p class="dhint dhint--top" x-text="$t('set.spk.count.hint')"></p>
+
+        <div class="field">
+          <span class="field__label" id="set-speakers" x-text="$t('home.opt.speakers')"></span>
+          <div x-segmented="{ labelledby: 'set-speakers', options: $segOptions('speakers'), value: defaultSpeakers, onChange: (v) => setDefaults('speakers', { default_speakers: Number(v) }) }"></div>
+        </div>
+      </section>
+      </div>
+
+      <div class="tpanel" role="tabpanel" id="panel-summary" aria-labelledby="tab-summary" tabindex="0" x-show="tab === 'summary'" x-cloak>
+      <section class="dset" id="set-summary-provider" aria-labelledby="h-sumprov">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-sumprov" x-text="$t('set.sum.title')"></h3>
+        </div>
+        <p class="dhint dhint--top" x-text="$t('set.sum.hint')"></p>
+        <ul class="models" :aria-label="$t('set.sum.title')">
+          <li class="model">
+            <span class="model__text">
+              <span class="model__name" x-text="$t('set.sum.ollama')"></span>
+              <span class="model__desc" x-text="$t('set.sum.ollama.desc')"></span>
+            </span>
+            <span class="pill" :class="summaryProvider === 'ollama' ? 'pill--ready' : 'pill--queued'">
+              <span x-icon="'check'" x-show="summaryProvider === 'ollama'"></span>
+              <span x-text="summaryProvider === 'ollama' ? $t('set.model.active') : $t('set.sum.not_found')"></span>
+            </span>
+          </li>
+          <li class="model">
+            <span class="model__text">
+              <span class="model__name" x-text="$t('set.sum.builtin')"></span>
+              <span class="model__desc" x-text="$t('set.sum.builtin.desc')"></span>
+            </span>
+            <span class="pill" :class="summaryProvider === 'builtin' ? 'pill--ready' : 'pill--idle'">
+              <span x-icon="'check'" x-show="summaryProvider === 'builtin'"></span>
+              <span x-text="summaryProvider === 'builtin' ? $t('set.model.active') : $t('set.sum.standby')"></span>
+            </span>
+          </li>
+        </ul>
+        <p class="dhint" x-text="$t('set.sum.gemini_note')"></p>
+        <p class="dhint" x-show="summaryProvider !== 'ollama'"><a class="dlink" href="#settings/setup" x-text="$t('set.sum.setup_link')"></a></p>
+      </section>
+      </div>
+
+      <div class="tpanel" role="tabpanel" id="panel-setup" aria-labelledby="tab-setup" tabindex="0" x-show="tab === 'setup'" x-cloak>
+      <!-- Setup checks -->
+      <section class="dset" id="set-checks" aria-labelledby="h-checks">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-checks" x-text="$t('set.checks.title')"></h3>
+          <button type="button" class="btn" @click="refreshStatus()" x-text="$t('set.checks.recheck')"></button>
+        </div>
+        <p class="dhint dhint--top" x-show="checksState === 'loading'" x-text="$t('set.checks.loading')"></p>
+        <p class="dnote" x-show="checksState === 'error'" x-cloak role="alert">
+          <span x-icon="'alert-triangle'"></span><span x-text="$t('set.checks.failed')"></span>
+        </p>
+        <p class="dsummary" x-show="checks" x-cloak
+           x-text="missingCount ? $t(missingCount === 1 ? 'set.checks.missing.one' : 'set.checks.missing.other', { n: missingCount }) : $t('set.checks.ok')"></p>
+        <ul class="checks" x-show="checks" x-cloak>
+          <template x-for="row in checkRows" :key="row.id">
+            <li class="check" :class="'check--' + row.state">
+              <span x-icon="checkIcon(row.state)"></span>
+              <span class="check__name" x-text="checkName(row.id)"></span>
+              <span class="check__state" x-text="$t('set.checks.state.' + row.state)"></span>
+            </li>
+          </template>
+        </ul>
+        <!-- Hook for the one-click installer (#10): mount its plate and progress here; it listens for the "setup-checks" window event. -->
+        <div data-mount="setup-actions" class="sdrawer" x-data="{ s: $store.setup }">
+          <div class="sdrawer__bar" x-show="s.canInstall || s.running" x-cloak>
+            <button type="button" class="btn btn--solid" :disabled="s.running" :aria-busy="s.running"
+                    @click="s.start()" x-text="s.running ? $t('setup.all.busy') : $t('setup.all')"></button>
+          </div>
+          <p class="dnote" x-show="s.startError" x-cloak role="alert">
+            <span x-icon="'alert-triangle'"></span><span x-text="$t('setup.error.start')"></span>
+          </p>
+          <h4 class="prose__h" x-show="s.attention.length" x-cloak x-text="$t('setup.drawer.title')"></h4>
+          <ul class="setup__list setup__list--drawer" x-show="s.attention.length" x-cloak>
+            <template x-for="r in s.attention" :key="r.id">
+              <li class="srow" :class="'srow--' + s.kind(r)">
+                <div class="srow__main">
+                  <div class="srow__text">
+                    <span class="srow__name" x-text="r.name"></span>
+                    <span class="srow__why" x-text="$t('setup.why.' + r.id)"></span>
+                  </div>
+                  <div class="srow__state">
+                    <span class="pill" :class="'pill--' + ({ pending: 'queued', running: 'processing', done: 'ready', failed: 'failed' }[s.kind(r)] || 'idle')">
+                      <span x-icon="s.kind(r) === 'done' ? 'check' : 'alert-triangle'" x-show="s.kind(r) === 'done' || s.kind(r) === 'failed'"></span>
+                      <span x-text="$t('setup.state.' + s.kind(r))"></span>
+                    </span>
+                    <button type="button" class="btn" x-show="s.kind(r) === 'failed'" x-cloak
+                            :aria-label="$t('setup.retry.aria', { name: r.name })" @click="s.retry(r.id)">
+                      <span x-icon="'rotate-ccw'"></span><span x-text="$t('setup.retry')"></span>
+                    </button>
+                  </div>
+                </div>
+            
+                <div class="srow__prog" x-show="s.kind(r) === 'running'" x-cloak>
+                  <div class="bar" :class="{ 'bar--wait': s.progressPct(r) === null }" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                       :aria-valuenow="s.progressPct(r)" :aria-label="$t('setup.progress', { name: r.name })">
+                    <div class="bar__fill" :style="{ width: (s.progressPct(r) === null ? 100 : s.progressPct(r)) + '%' }"></div>
+                  </div>
+                  <span class="srow__meta tabular" x-text="(s.progressPct(r) === null ? '' : s.progressPct(r) + '% ') + s.detailText(r)"></span>
+                </div>
+            
+                <p class="srow__error" x-show="s.kind(r) === 'failed'" x-cloak>
+                  <span x-icon="'alert-triangle'"></span><span x-text="s.detailText(r)"></span>
+                </p>
+            
+                <div class="srow__more">
+                  <button type="button" class="btn btn--text" :aria-expanded="!!s.expanded['drawer:' + r.id]" :aria-controls="'steps-drawer-' + r.id" @click="s.toggle('drawer:' + r.id)">
+                    <span x-text="$t('setup.steps.show')"></span><span x-icon="s.expanded['drawer:' + r.id] ? 'chevron-up' : 'chevron-down'"></span>
+                  </button>
+                </div>
+                <div class="srow__steps" :id="'steps-drawer-' + r.id" x-show="s.expanded['drawer:' + r.id]" x-cloak>
+                  <h4 class="srow__os" x-text="$t('setup.steps.title', { os: $t('setup.os.' + s.os) })"></h4>
+                  <p class="srow__none" x-show="!r.steps.length" x-text="$t('setup.steps.none')"></p>
+                  <p class="srow__where" x-show="r.steps.some((st) => st.cmd)" x-text="$t('setup.steps.where')"></p>
+                  <ol class="steps">
+                    <template x-for="(st, i) in r.steps" :key="i">
+                      <li class="step">
+                        <span class="step__do" x-text="s.stepText(r, i, st)"></span>
+                        <div class="step__cmd" x-show="st.cmd">
+                          <code class="step__code" x-text="st.cmd"></code>
+                          <button type="button" class="btn step__copy" :aria-label="$t('setup.copy.aria', { n: i + 1 })" @click="s.copy(r.id, i, st.cmd)">
+                            <span x-text="s.copied === r.id + ':' + i ? $t('setup.copied') : $t('setup.copy')"></span>
+                          </button>
+                        </div>
+                      </li>
+                    </template>
+                  </ol>
+                </div>
+              </li>
+            </template>
+          </ul>
+        </div>
+      </section>
+      </div>
+
+      <div class="tpanel" role="tabpanel" id="panel-about" aria-labelledby="tab-about" tabindex="0" x-show="tab === 'about'" x-cloak>
+      <!-- About -->
+      <section class="dset dset--about" id="set-about" aria-labelledby="h-about">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-about" x-text="$t('set.about.title')"></h3>
+        </div>
+        <p class="prose" x-text="$t('set.about.intro')"></p>
+
+        <h4 class="prose__h" x-text="$t('set.about.how')"></h4>
+        <ol class="prose prose--list">
+          <template x-for="n in [1, 2, 3, 4, 5]" :key="n"><li x-text="$t('set.about.step.' + n)"></li></template>
+        </ol>
+
+        <h4 class="prose__h" x-text="$t('set.about.engines')"></h4>
+        <p class="prose" x-text="$t('set.about.local')"></p>
+        <p class="prose" x-text="$t('set.about.cloud')"></p>
+
+        <h4 class="prose__h" x-text="$t('set.about.limits')"></h4>
+        <ul class="prose prose--list">
+          <template x-for="n in [1, 2, 3]" :key="n"><li x-text="$t('set.about.limit.' + n)"></li></template>
+        </ul>
+
+        <h4 class="prose__h" x-text="$t('set.about.data')"></h4>
+        <p class="prose" x-text="$t('set.about.data_text')"></p>
+      </section>
+      </div>
+    </div>
+  </dialog>
 </body>
 </html>

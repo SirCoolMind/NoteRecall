@@ -1,0 +1,94 @@
+/* First-run readiness: the panel above the drop slot on Home, the item rows shared with the
+   Settings drawer, and the locked drop slot. Tokens only; see tokens.css.
+   On Home the panel head is a plain sheet; its "Set up everything" button is the one reversed plate while the slot below is switched off. */
+
+/* ---- ready: the whole panel collapses to one line ---- */
+.setup-line {
+  display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2) var(--sp-3);
+  min-height: var(--target); margin: 0 0 var(--sp-3); color: var(--ink-2); font-size: var(--fs-small);
+}
+.setup-line .icon { width: 20px; height: 20px; color: var(--ink); }
+.setup-line__text { font-weight: 600; color: var(--ink); }
+.setup-line__link { display: inline-flex; align-items: center; min-height: var(--target); margin-left: auto; }
+
+/* ---- not ready: reversed head, then the list of what is missing ---- */
+.setup { margin: 0 0 var(--sp-5); }
+.setup__head {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-4) var(--sp-6);
+  padding: var(--sp-6) var(--sp-7);
+  background: var(--sheet); color: var(--ink); border: 1px solid var(--rule); border-radius: var(--r-slot) var(--r-slot) 0 0;
+}
+.setup__intro { flex: 1 1 24rem; min-width: 0; }
+.setup__title { margin: 0; font: 700 var(--fs-title)/var(--lh-tight) var(--font-slot); text-wrap: balance; }
+.setup__lead { margin: var(--sp-2) 0 0; max-width: var(--measure); }
+.setup__count { margin: var(--sp-2) 0 0; font: 700 var(--fs-body)/1 var(--font-slot); }
+.setup__act { flex: none; }
+.setup__act .plate-btn { background: var(--action); color: var(--on-action); }
+.setup__act .plate-btn:hover { background: var(--action-hover); opacity: 1; }
+.setup__act .plate-btn:focus-visible { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 5px var(--ink); }
+.plate-btn:disabled { cursor: progress; }
+.setup__act .plate-btn:disabled[aria-busy="true"] { background: color-mix(in srgb, var(--action) 82%, var(--sheet)); }
+.setup__err {
+  display: flex; align-items: flex-start; gap: var(--sp-2); margin: 0; padding: var(--sp-3) var(--sp-5);
+  background: var(--on-air-soft); color: var(--on-air); font-weight: 600;
+}
+.setup__err .icon { width: 20px; height: 20px; margin-top: 2px; flex: none; }
+
+.setup__list { list-style: none; margin: 0; padding: 0; background: var(--sheet); border: 1px solid var(--rule); border-top: 0; border-radius: 0 0 var(--r-slot) var(--r-slot); }
+.srow { padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--rule); }
+.srow:first-child { border-top: 0; }
+.srow__main { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3) var(--sp-4); }
+.srow__text { flex: 1 1 18rem; min-width: 0; }
+.srow__name { display: block; font: 600 var(--fs-body)/var(--lh-tight) var(--font-body); }
+.srow__why { display: block; margin-top: var(--sp-1); color: var(--ink-2); font-size: var(--fs-small); }
+.srow__state { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+
+/* the status pills from the schedule, loosened to fit a row */
+.srow .pill { min-width: 0; text-align: center; padding-top: var(--sp-2); padding-bottom: var(--sp-2); }
+.pill--idle { border: 2px solid var(--rule-strong); color: var(--ink); background: transparent; }
+.srow--optional .pill--idle { color: var(--ink-2); }
+
+.srow__prog { display: grid; gap: var(--sp-2); max-width: 36rem; margin-top: var(--sp-3); }
+.srow__meta { color: var(--ink-2); font-size: var(--fs-small); overflow-wrap: anywhere; }
+.srow__meta:empty { display: none; }
+.srow__error { display: flex; align-items: flex-start; gap: var(--sp-2); margin: var(--sp-3) 0 0; max-width: var(--measure); color: var(--on-air); font-weight: 500; overflow-wrap: anywhere; }
+.srow__error .icon { width: 20px; height: 20px; margin-top: 2px; flex: none; }
+
+.srow__more { margin-top: var(--sp-2); }
+.btn--text { border-color: transparent; padding: 0 var(--sp-2); margin-left: calc(var(--sp-2) * -1); color: var(--ink-2); }
+.btn--text:hover { color: var(--ink); }
+.btn--solid { background: var(--action); color: var(--on-action); border-color: var(--action); }
+.btn--solid:hover { background: var(--action-hover); }
+
+.srow__steps { margin-top: var(--sp-2); padding: var(--sp-4); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-slot); }
+.srow__os { margin: 0 0 var(--sp-2); font: 700 var(--fs-body)/var(--lh-tight) var(--font-slot); }
+.srow__where, .srow__none { margin: 0 0 var(--sp-3); color: var(--ink-2); font-size: var(--fs-small); }
+.steps { margin: 0; padding-left: var(--sp-5); }
+.step { margin-bottom: var(--sp-4); padding-left: var(--sp-1); }
+.step:last-child { margin-bottom: 0; }
+.step__do { display: block; max-width: var(--measure); }
+.step__cmd { display: flex; align-items: flex-start; gap: var(--sp-2); margin-top: var(--sp-2); }
+.step__code {
+  flex: 1 1 auto; min-width: 0; padding: var(--sp-3); box-sizing: border-box;
+  background: var(--sheet); border: 1px solid var(--rule); border-radius: var(--r-slot);
+  font: 400 var(--fs-small)/1.5 var(--font-code); white-space: pre-wrap; overflow-wrap: anywhere; user-select: all;
+}
+.step__copy { flex: none; min-width: 5.5rem; justify-content: center; }
+
+/* ---- drawer variant ---- */
+.sdrawer__bar { margin: var(--sp-3) 0; }
+.setup__list--drawer { border-top: 1px solid var(--rule); border-radius: var(--r-slot); }
+.setup__list--drawer .srow { padding: var(--sp-3); }
+
+/* ---- the slot while setup is unfinished: switched off, so the Set up plate above is the only reversed one ---- */
+.drop-slot.is-locked {
+  background: var(--paper); color: var(--ink-2); border: 2px dashed var(--rule-strong); cursor: not-allowed;
+}
+.drop-slot.is-locked .plate-btn { background: transparent; color: var(--ink-2); border: 1px solid var(--rule-strong); cursor: not-allowed; opacity: 1; }
+.drop-slot.is-locked .opt, .drop-slot.is-locked .opt__select { cursor: not-allowed; color: var(--ink-2); }
+
+@media (max-width: 720px) {
+  .setup__head { padding: var(--sp-5); }
+  .srow { padding: var(--sp-4); }
+  .setup-line__link { margin-left: 0; }
+}

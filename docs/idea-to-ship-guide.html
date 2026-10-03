@@ -1,0 +1,502 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Idea to Shipped</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Literata:opsz,wght@7..72,500;7..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f2ea; --surface:#fffdf8; --sunk:#efe9dd; --ink:#1d1b18; --ink-2:#55504a; --ink-3:#6b645b;
+  --line:#ddd5c6; --you:#1d1b18; --you-bg:#e9e3d6;
+  --grill:#c2410c; --grill-bg:#fbe7da; --imp:#3b4fc4; --imp-bg:#e3e7fb;
+  --matt:#0f7a5c; --matt-bg:#dcf1e8; --warn:#9a3412;
+  --serif:"Literata",Georgia,serif; --sans:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#16140f; --surface:#1f1c17; --sunk:#26221c; --ink:#f1ece2; --ink-2:#bdb5a8; --ink-3:#a39a8c;
+    --line:#38322a; --you:#f1ece2; --you-bg:#2e2a23;
+    --grill:#fb8a4c; --grill-bg:#3a2216; --imp:#9aa8ff; --imp-bg:#1f2547;
+    --matt:#4fd1a5; --matt-bg:#14332a; --warn:#fdba74;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#16140f; --surface:#1f1c17; --sunk:#26221c; --ink:#f1ece2; --ink-2:#bdb5a8; --ink-3:#a39a8c;
+  --line:#38322a; --you:#f1ece2; --you-bg:#2e2a23;
+  --grill:#fb8a4c; --grill-bg:#3a2216; --imp:#9aa8ff; --imp-bg:#1f2547;
+  --matt:#4fd1a5; --matt-bg:#14332a; --warn:#fdba74;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.6 var(--sans);-webkit-font-smoothing:antialiased}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+h1,h2,h3{font-family:var(--serif);font-weight:700;line-height:1.15;margin:0}
+h1{font-size:clamp(34px,6vw,58px);letter-spacing:-.02em}
+h2{font-size:clamp(26px,3.6vw,36px);margin-bottom:12px}
+h3{font-size:20px;font-weight:500}
+p{margin:0 0 12px}
+code,.cmd{font-family:var(--mono);font-size:.88em}
+.cmd{background:var(--sunk);border:1px solid var(--line);border-radius:6px;padding:1px 6px;white-space:nowrap}
+.cmd.g{background:var(--grill-bg);color:var(--grill);border-color:transparent}
+.cmd.i{background:var(--imp-bg);color:var(--imp);border-color:transparent}
+.cmd.m{background:var(--matt-bg);color:var(--matt);border-color:transparent}
+section{padding:56px 0;border-top:1px solid var(--line)}
+.kicker{font:500 14px/1 var(--mono);color:var(--ink-3);margin-bottom:14px}
+.lede{font-size:19px;color:var(--ink-2);max-width:680px}
+header{padding:64px 0 48px}
+header .lede{margin-top:18px}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin-top:28px}
+.toc a{color:var(--ink);text-decoration:none;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 14px;font-size:14px}
+.toc a:hover{border-color:var(--ink-3)}
+
+/* two-skill comparison */
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:22px}
+.card.g{background:linear-gradient(var(--grill-bg),var(--surface) 140px)} .card.i{background:linear-gradient(var(--imp-bg),var(--surface) 140px)}
+.card h3{margin-bottom:6px}
+.card .q{font-family:var(--serif);font-size:22px;margin:8px 0 14px}
+.card.g .q{color:var(--grill)} .card.i .q{color:var(--imp)}
+.card ul{margin:0;padding-left:18px} .card li{margin-bottom:6px}
+.card dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:14px 0 0;font-size:14px}
+.card dt{color:var(--ink-3)} .card dd{margin:0}
+.note{background:var(--sunk);border-left:3px solid var(--ink-3);border-radius:0 10px 10px 0;padding:12px 16px;margin-top:18px;font-size:15px;color:var(--ink-2)}
+.note strong{color:var(--ink)}
+
+/* swimlane */
+.lane-scroll{overflow-x:auto;margin-top:22px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.lanes{display:grid;grid-template-columns:132px repeat(6,minmax(138px,1fr));min-width:980px}
+.lanes > div{padding:12px;border-bottom:1px solid var(--line);border-right:1px solid var(--line);font-size:13.5px;line-height:1.45}
+.lanes > div:nth-child(7n){border-right:0}
+.lanes .ph{font:500 13px/1.3 var(--mono);color:var(--ink-3);background:var(--sunk)}
+.lanes .ph b{display:block;font:700 17px/1.2 var(--serif);text-transform:none;letter-spacing:0;color:var(--ink);margin-top:4px}
+.lanes .who{font-weight:600;font-size:13px;display:flex;align-items:center;gap:8px}
+.dot{width:10px;height:10px;border-radius:50%;flex:none}
+.box{border-radius:8px;padding:8px 10px}
+.box.y{background:var(--you-bg)} .box.g{background:var(--grill-bg)} .box.i{background:var(--imp-bg)} .box.m{background:var(--matt-bg)}
+.box .cmd{background:transparent;border:0;padding:0;font-weight:500}
+.box.g .cmd{color:var(--grill)} .box.i .cmd{color:var(--imp)} .box.m .cmd{color:var(--matt)}
+.lanes .last{border-bottom:0}
+.legend{display:flex;flex-wrap:wrap;gap:16px;margin-top:12px;font-size:13px;color:var(--ink-2)}
+.legend span{display:flex;align-items:center;gap:6px}
+
+/* homework */
+.steps{counter-reset:s;display:grid;gap:12px;margin-top:20px}
+.step{display:grid;grid-template-columns:44px 1fr;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.step::before{counter-increment:s;content:counter(s);font:700 26px/1 var(--serif);color:var(--grill)}
+.step h3{font-size:18px;margin-bottom:4px}
+.step p{margin:0;color:var(--ink-2);font-size:15px}
+.step em{color:var(--ink);font-style:normal;font-family:var(--mono);font-size:13.5px;background:var(--sunk);padding:1px 5px;border-radius:4px}
+pre{background:var(--sunk);border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto;font:13.5px/1.55 var(--mono);margin:14px 0 0;white-space:pre-wrap;word-break:break-word}
+.copy{position:relative}
+.copy button{position:absolute;top:8px;right:8px;font:500 12px var(--mono);background:var(--surface);color:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:4px 8px;cursor:pointer}
+
+/* picker */
+.picker{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;margin-top:20px}
+.q-row{margin-bottom:18px}
+.q-row > span{display:block;font-weight:600;margin-bottom:8px}
+.seg{display:flex;flex-wrap:wrap;gap:8px}
+.seg button{font:500 14px var(--sans);color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 14px;cursor:pointer;text-align:left}
+.seg button small{display:block;color:var(--ink-3);font-size:12px;font-weight:400}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg button[aria-pressed="true"] small{color:var(--bg)}
+.seg button:focus-visible{outline:2px solid var(--imp);outline-offset:2px}
+#refineRow[hidden]{display:none}
+.route{list-style:none;padding:0;margin:22px 0 0;border-top:1px dashed var(--line);padding-top:18px}
+.route li{display:grid;grid-template-columns:28px 1fr;gap:12px;padding:10px 0;position:relative}
+.route li:not(:last-child)::after{content:"";position:absolute;left:13px;top:38px;bottom:-6px;width:2px;background:var(--line)}
+.route .n{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font:600 13px var(--mono);color:#fff;background:var(--ink-3)}
+.route .n.y{background:var(--ink-2)} .route .n.g{background:var(--grill)} .route .n.i{background:var(--imp)} .route .n.m{background:var(--matt)}
+:root[data-theme="dark"] .route .n, .route .n{color:var(--bg)}
+.route b{display:block}
+.route p{margin:2px 0 0;color:var(--ink-2);font-size:14.5px}
+
+/* rounds demo */
+.chat{display:grid;gap:12px;margin-top:20px}
+.bubble{border-radius:14px;padding:16px 18px;max-width:760px;font-size:15px}
+.bubble.ai{background:var(--surface);border:1px solid var(--line)}
+.bubble.me{background:var(--you-bg);margin-left:auto}
+.bubble .who{font:500 13px var(--mono);color:var(--ink-3);margin-bottom:8px}
+.bubble hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+.rec{color:var(--grill)}
+
+/* scenarios */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-top:20px}
+.tabs button{font:500 14px var(--sans);border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px 10px 0 0;padding:10px 16px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:0 14px 14px 14px;padding:22px}
+.panel[hidden]{display:none}
+.panel ol{margin:12px 0 0;padding-left:22px} .panel li{margin-bottom:10px}
+.panel .why{color:var(--ink-2);font-size:14.5px}
+
+/* cheat sheet */
+.cheat{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px}
+.cheat .card h3{font-size:17px;margin-bottom:10px}
+.cheat table{width:100%;border-collapse:collapse;font-size:14px}
+.cheat td{padding:6px 0;border-top:1px solid var(--line);vertical-align:top}
+.cheat td:first-child{width:46%;padding-right:8px}
+.traps{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:20px}
+.trap{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px}
+.trap b{color:var(--warn);display:block;margin-bottom:4px}
+.trap p{margin:0;font-size:15px;color:var(--ink-2)}
+footer{padding:40px 0 64px;color:var(--ink-3);font-size:14px;border-top:1px solid var(--line)}
+.theme-btn{position:fixed;top:14px;right:14px;font:500 12px var(--mono);background:var(--surface);color:var(--ink-2);border:1px solid var(--line);border-radius:999px;padding:6px 12px;cursor:pointer;z-index:5}
+
+@media (max-width:760px){
+  .duo,.cheat,.traps{grid-template-columns:1fr}
+  section{padding:40px 0}
+  header{padding:56px 0 32px}
+  .step{grid-template-columns:30px 1fr;padding:14px}
+  .seg button{flex:1 1 140px}
+}
+</style>
+</head>
+<body>
+<button class="theme-btn" id="themeBtn" type="button">theme</button>
+
+<header class="wrap">
+  <div class="kicker">NoteRecall · workflow field guide</div>
+  <h1>From “I have an idea”<br>to shipped, without guessing.</h1>
+  <p class="lede">How to use Matt Pocock’s <span class="cmd g">/grill-me</span> and the <span class="cmd i">/impeccable</span> design skill together when you want to add a feature or revamp a module. The short answer: <strong>you think first, grill second, design third, and code last.</strong></p>
+  <nav class="toc">
+    <a href="#mental">1 · Two skills, two jobs</a>
+    <a href="#flow">2 · The whole flow</a>
+    <a href="#homework">3 · What you do first</a>
+    <a href="#picker">4 · Pick your route</a>
+    <a href="#rounds">5 · What a grill feels like</a>
+    <a href="#scenarios">6 · Worked examples</a>
+    <a href="#cheat">7 · Cheat sheet & traps</a>
+  </nav>
+</header>
+
+<!-- 1 -->
+<section id="mental"><div class="wrap">
+  <div class="kicker">Mental model</div>
+  <h2>Two skills, two different questions</h2>
+  <p class="lede">They don’t compete. One settles <em>what and why</em>; the other settles <em>how it looks and feels</em>. Neither writes code during its first step.</p>
+  <div class="duo">
+    <div class="card g">
+      <h3>grill-me <span style="color:var(--ink-3);font-size:14px">(mattpocock-skills)</span></h3>
+      <div class="q">“What exactly are we building, and why?”</div>
+      <ul>
+        <li>Claude interviews <strong>you</strong>, relentlessly, until you both share one understanding.</li>
+        <li>It maps the idea as a <strong>design tree</strong>: each decision unlocks more decisions.</li>
+        <li>It asks in <strong>rounds</strong>: every question it can ask right now, numbered, each with its own recommended answer.</li>
+        <li><strong>Facts</strong> (what the code does) it looks up itself. <strong>Decisions</strong> are yours.</li>
+        <li>It is done when nothing is left silently assumed, and it does not act until you confirm.</li>
+      </ul>
+      <dl>
+        <dt>Type</dt><dd><span class="cmd g">/grill-me</span> or <span class="cmd g">/grill-with-docs</span></dd>
+        <dt>Works on</dt><dd>Anything: backend, UI, data model, even non-code plans</dd>
+        <dt>Output</dt><dd>A conversation full of settled decisions (plus CONTEXT.md / ADRs with <code>-with-docs</code>)</dd>
+      </dl>
+    </div>
+    <div class="card i">
+      <h3>impeccable</h3>
+      <div class="q">“How should the screen look, behave and feel?”</div>
+      <ul>
+        <li>A design director for <strong>frontend only</strong>. Not for backend-only work.</li>
+        <li>Reads your <code>PRODUCT.md</code> and <code>DESIGN.md</code> (NoteRecall already has both).</li>
+        <li><span class="cmd i">shape</span> runs a short UX interview and writes a <strong>design brief</strong>, with no code.</li>
+        <li>After building, <span class="cmd i">critique</span> / <span class="cmd i">audit</span> / <span class="cmd i">polish</span> judge and fix the result.</li>
+        <li>You must say <strong>refine</strong> (keep the look) or <strong>redesign</strong> (replace it). It never splits the difference.</li>
+      </ul>
+      <dl>
+        <dt>Type</dt><dd><span class="cmd i">/impeccable shape &lt;target&gt;</span>, or bare <span class="cmd i">/impeccable</span> for a menu</dd>
+        <dt>Works on</dt><dd>Pages, components, forms, empty states, flows</dd>
+        <dt>Output</dt><dd>A confirmed design brief, then reviews and fixes on the built UI</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="note"><strong>Important:</strong> <code>/grill-me</code>, <code>/grill-with-docs</code>, <code>/to-spec</code>, <code>/to-tickets</code> and <code>/implement</code> are set to <em>manual invoke only</em>. Claude will not start them for you, so <strong>you</strong> have to type them. Bare <code>/impeccable</code> also only suggests; it never runs a command on its own.</div>
+</div></section>
+
+<!-- 2 -->
+<section id="flow"><div class="wrap">
+  <div class="kicker">The whole flow</div>
+  <h2>Who does what, phase by phase</h2>
+  <p class="lede">Read it left to right. Your row is the important one: you have work in every column, and the most important work is in the first.</p>
+  <div class="lane-scroll" role="region" aria-label="Swimlane diagram" tabindex="0">
+    <div class="lanes">
+      <div class="ph">Lane</div>
+      <div class="ph">Phase 0<b>Homework</b></div>
+      <div class="ph">Phase 1<b>Think</b></div>
+      <div class="ph">Phase 2<b>Shape the UI</b></div>
+      <div class="ph">Phase 3<b>Write it down</b></div>
+      <div class="ph">Phase 4<b>Build</b></div>
+      <div class="ph">Phase 5<b>Judge & ship</b></div>
+
+      <div class="who"><span class="dot" style="background:var(--ink-2)"></span>You</div>
+      <div><div class="box y">Write a 5-line pitch: problem, who, done-looks-like, must-not-change, constraints.</div></div>
+      <div><div class="box y">Answer each round. Accept recommendations or push back. Confirm “we agree”.</div></div>
+      <div><div class="box y">Say <b>refine</b> or <b>redesign</b>. Approve or correct the brief.</div></div>
+      <div><div class="box y">Check the test seams and ticket slices. Approve.</div></div>
+      <div><div class="box y">Let it run. Click through the app between slices.</div></div>
+      <div><div class="box y">Read the findings, choose what to fix, commit, push.</div></div>
+
+      <div class="who"><span class="dot" style="background:var(--grill)"></span>grill-me</div>
+      <div></div>
+      <div><div class="box g"><span class="cmd">/grill-me</span><br>or <span class="cmd">/grill-with-docs</span><br>Rounds of numbered Qs, each with a recommended answer.</div></div>
+      <div></div><div></div><div></div><div></div>
+
+      <div class="who"><span class="dot" style="background:var(--imp)"></span>impeccable</div>
+      <div></div><div></div>
+      <div><div class="box i"><span class="cmd">/impeccable shape</span><br>UX interview, then a design brief. No code.</div></div>
+      <div></div>
+      <div><div class="box i">Builds UI under <code>craft-floor</code> rules, using DESIGN.md tokens.</div></div>
+      <div><div class="box i"><span class="cmd">critique</span> · <span class="cmd">audit</span> · <span class="cmd">polish</span></div></div>
+
+      <div class="who last"><span class="dot" style="background:var(--matt)"></span>Other Matt skills</div>
+      <div class="last"></div>
+      <div class="last"><div class="box m">Too foggy? <span class="cmd">/wayfinder</span>. Can’t picture it? <span class="cmd">/prototype</span></div></div>
+      <div class="last"></div>
+      <div class="last"><div class="box m"><span class="cmd">/to-spec</span> → GitHub issue<br><span class="cmd">/to-tickets</span> → vertical slices</div></div>
+      <div class="last"><div class="box m"><span class="cmd">/implement</span> (uses <span class="cmd">/tdd</span>)</div></div>
+      <div class="last"><div class="box m"><span class="cmd">/code-review</span></div></div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:var(--ink-2)"></span>You (human)</span>
+    <span><span class="dot" style="background:var(--grill)"></span>grill-me: decides <em>what</em></span>
+    <span><span class="dot" style="background:var(--imp)"></span>impeccable: decides <em>how it looks</em></span>
+    <span><span class="dot" style="background:var(--matt)"></span>Matt’s other skills: spec, tickets, build, review</span>
+  </div>
+  <div class="note"><strong>Why grill comes before shape:</strong> impeccable’s shape asks UX questions (who arrives, what states matter). If you haven’t decided <em>what the feature does</em> yet, those answers will be guesses. Grill settles the behaviour; shape then designs around a settled behaviour.</div>
+</div></section>
+
+<!-- 3 -->
+<section id="homework"><div class="wrap">
+  <div class="kicker">As a human, what do I do first?</div>
+  <h2>Ten minutes of homework before typing any slash command</h2>
+  <p class="lede">The grill works on whatever you give it. A vague prompt gets you a long interrogation; a five-line pitch gets you a short, sharp one. Write these down, even roughly.</p>
+  <div class="steps">
+    <div class="step"><div><h3>The problem, in your own words</h3><p>Not the solution. What hurts today? <em>“After a 2-hour meeting I can’t find the moment where we agreed the budget.”</em></p></div></div>
+    <div class="step"><div><h3>Who hits it, and when</h3><p>NoteRecall has one user (you), but which moment? <em>“While reviewing, a day later, with the audio playing.”</em></p></div></div>
+    <div class="step"><div><h3>What “done” looks like</h3><p>One observable sentence you could test by hand. <em>“I click a moment, it’s saved, and it’s in the .md export.”</em></p></div></div>
+    <div class="step"><div><h3>What must not change</h3><p>The guard rails. <em>“Local-first. No new build step (ADR 0001). The transcript layout stays.”</em></p></div></div>
+    <div class="step"><div><h3>Feature or revamp? UI, backend or both? How big?</h3><p>Answer these three and the route below picks itself. For a UI revamp, also decide: <b>refine</b> (same look, better) or <b>redesign</b> (new look)?</p></div></div>
+  </div>
+  <p style="margin-top:18px">Then paste it in like this:</p>
+  <div class="copy"><button type="button" data-copy="pitch">copy</button>
+<pre id="pitch">/grill-me
+Idea: let me bookmark moments while reviewing a meeting.
+Problem: after long meetings I can't find key moments again.
+Done = I tap a moment during playback, give it a label, and it shows in a list + in the .md export.
+Must not change: local-first, no build step (ADR 0001), transcript layout.
+Unsure about: where bookmarks live in the UI, and whether they survive a re-transcribe.</pre></div>
+  <div class="note"><strong>The “unsure about” line is gold.</strong> It tells the grill where the real design tree is, so it spends its rounds there instead of on things you already know.</div>
+</div></section>
+
+<!-- 4 -->
+<section id="picker"><div class="wrap">
+  <div class="kicker">Interactive</div>
+  <h2>Pick your route</h2>
+  <p class="lede">Answer three questions and get the exact order of commands to type.</p>
+  <div class="picker">
+    <div class="q-row"><span>What is it?</span>
+      <div class="seg" data-q="kind">
+        <button type="button" data-v="feature" aria-pressed="true">New feature<small>something that doesn’t exist yet</small></button>
+        <button type="button" data-v="revamp" aria-pressed="false">Revamp a module<small>rework something that exists</small></button>
+      </div></div>
+    <div class="q-row"><span>Where does it live?</span>
+      <div class="seg" data-q="area">
+        <button type="button" data-v="ui" aria-pressed="false">UI only<small>static/ pages, components</small></button>
+        <button type="button" data-v="backend" aria-pressed="false">Backend only<small>pipeline, engines, server</small></button>
+        <button type="button" data-v="both" aria-pressed="true">Both<small>new data + new screen</small></button>
+      </div></div>
+    <div class="q-row"><span>How big?</span>
+      <div class="seg" data-q="size">
+        <button type="button" data-v="small" aria-pressed="false">Small<small>an afternoon; one session</small></button>
+        <button type="button" data-v="medium" aria-pressed="true">Medium<small>a few slices; a few days</small></button>
+        <button type="button" data-v="huge" aria-pressed="false">Huge / foggy<small>more than one session can hold</small></button>
+      </div></div>
+    <div class="q-row" id="refineRow" hidden><span>Keep the current look?</span>
+      <div class="seg" data-q="look">
+        <button type="button" data-v="refine" aria-pressed="true">Refine<small>same identity, done better</small></button>
+        <button type="button" data-v="redesign" aria-pressed="false">Redesign<small>replace the look entirely</small></button>
+      </div></div>
+    <ol class="route" id="route" aria-live="polite"></ol>
+  </div>
+</div></section>
+
+<!-- 5 -->
+<section id="rounds"><div class="wrap">
+  <div class="kicker">What a grill round feels like</div>
+  <h2>You answer in shorthand. It does the bookkeeping.</h2>
+  <p class="lede">Each round only asks what can be answered now. Questions that depend on your answers wait for the next round.</p>
+  <div class="chat">
+    <div class="bubble ai"><div class="who">Claude · round 1</div>
+      ❓ <b>Q1 · Where do bookmarks attach?</b> To a timestamp, or to a transcript segment? Segments move if you re-transcribe; timestamps don’t.<br>
+      <span class="rec">➡️ Recommend: timestamp, then snap to the nearest segment for display.</span>
+      <hr>
+      ❓ <b>Q2 · Labels required?</b> (a) always ask, (b) optional, (c) none, auto-titled from the text.<br>
+      <span class="rec">➡️ Recommend: (b) optional, defaulting to the first words of the segment.</span>
+      <hr>
+      ❓ <b>Q3 · In exports?</b> .md only, or .txt and .srt too?<br>
+      <span class="rec">➡️ Recommend: .md and .txt; .srt has no place for them.</span>
+    </div>
+    <div class="bubble me"><div class="who">You</div>Q1 agree. Q2 (b). Q3 .md only for now.</div>
+    <div class="bubble ai"><div class="who">Claude · round 2 (new frontier)</div>
+      ❓ <b>Q4 · Re-transcribe:</b> keep bookmarks whose timestamp still lands in a segment, and drop the rest with a notice?<br>
+      <span class="rec">➡️ Recommend: keep all; they’re timestamp-based (follows from Q1).</span><br>…
+    </div>
+    <div class="bubble ai"><div class="who">Claude · end</div>Frontier is empty. Summary of the 9 decisions… <b>Do we have a shared understanding?</b></div>
+    <div class="bubble me"><div class="who">You</div>Yes. Now <code>/impeccable shape</code> the bookmark UI in the meeting view.</div>
+  </div>
+  <div class="note"><strong>Handy replies:</strong> “accept all recommendations except Q3”, “Q2: neither, here’s why…”, “park Q5, out of scope”, “you can look that up yourself”. If a question is about a <em>fact</em> in the code, tell it to check.</div>
+</div></section>
+
+<!-- 6 -->
+<section id="scenarios"><div class="wrap">
+  <div class="kicker">Worked examples on NoteRecall</div>
+  <h2>Three realistic runs</h2>
+  <div class="tabs" role="tablist">
+    <button type="button" role="tab" aria-selected="true" aria-controls="s1" id="t1">New feature · bookmarks</button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="s2" id="t2">UI revamp · Summary tab</button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="s3" id="t3">Backend revamp · diarization</button>
+  </div>
+  <div class="panel" role="tabpanel" id="s1" aria-labelledby="t1">
+    <h3>“Bookmark a moment during playback”: both UI and backend, medium</h3>
+    <ol>
+      <li><b>Homework.</b> The 5-line pitch from section 3.</li>
+      <li><span class="cmd g">/grill-with-docs</span> <span class="why">uses <code>-with-docs</code> because it adds a new domain term (“bookmark”) that should land in CONTEXT.md, and maybe an ADR about storage.</span></li>
+      <li><span class="cmd i">/impeccable shape bookmarks in the meeting view</span> <span class="why">gives a brief: where the button sits by the speaker-ribbon player, the empty state, how the list reads. Mode: Operate.</span></li>
+      <li><span class="cmd m">/to-spec</span> <span class="why">publishes a GitHub issue with user stories and test seams, labelled <code>ready-for-agent</code>.</span></li>
+      <li><span class="cmd m">/to-tickets</span> <span class="why">gives slices like ① store + API + one button ② list panel ③ export to .md.</span></li>
+      <li><span class="cmd m">/implement</span> per ticket, test-first.</li>
+      <li><span class="cmd i">/impeccable critique meeting view</span> → <span class="cmd i">/impeccable polish</span>, then <span class="cmd m">/code-review</span>.</li>
+    </ol>
+  </div>
+  <div class="panel" role="tabpanel" id="s2" aria-labelledby="t2" hidden>
+    <h3>“The Summary tab feels like a data dump”: UI only, medium</h3>
+    <ol>
+      <li><b>Homework.</b> Decide: <b>refine</b> (keep DESIGN.md’s look, fix hierarchy) or <b>redesign</b> (new visual world for this tab). This is the most important human call here.</li>
+      <li><span class="cmd i">/impeccable critique summary tab</span> <b>first</b>. <span class="why">For a revamp, get a scored list of problems before deciding what to change. It becomes your evidence.</span></li>
+      <li><span class="cmd g">/grill-me</span> on the critique. <span class="why">“Which of these problems do we actually fix? What must the tab answer in 5 seconds?”</span></li>
+      <li><span class="cmd i">/impeccable shape summary tab</span> <span class="why">writes a brief. With redesign, it walks a new visual direction and replaces DESIGN.md.</span></li>
+      <li>Build: <span class="cmd i">/impeccable layout</span> / <span class="cmd i">typeset</span> / <span class="cmd i">distill</span>, whichever the brief calls for, or <span class="cmd m">/implement</span> if there’s a spec.</li>
+      <li><span class="cmd i">/impeccable audit</span> (a11y, responsive) → <span class="cmd i">/impeccable polish</span>.</li>
+    </ol>
+  </div>
+  <div class="panel" role="tabpanel" id="s3" aria-labelledby="t3" hidden>
+    <h3>“Rework how speakers get detected”: backend only, medium to huge</h3>
+    <ol>
+      <li><b>Homework.</b> What is actually wrong? Collect 2–3 real recordings where it fails. Evidence beats opinions.</li>
+      <li>Is it really a bug? Then <span class="cmd m">/diagnosing-bugs</span> first, not a revamp.</li>
+      <li><span class="cmd g">/grill-with-docs</span> <span class="why">settles terms (“speaker”, “turn”, “re-detect”) and records the decision in an ADR.</span></li>
+      <li><span class="cmd m">/codebase-design</span> <span class="why">helps choose the module’s interface and seam, so <code>pipeline.py</code> calls one deep module.</span></li>
+      <li><span class="cmd m">/to-spec</span> → <span class="cmd m">/to-tickets</span> (expand–contract if the change is wide) → <span class="cmd m">/implement</span>.</li>
+      <li><span class="cmd m">/code-review</span>. <b>No impeccable here</b>; it is UI-only. Only bring it in if the Settings drawer gains a new control.</li>
+    </ol>
+  </div>
+</div></section>
+
+<!-- 7 -->
+<section id="cheat"><div class="wrap">
+  <div class="kicker">Keep this open</div>
+  <h2>Cheat sheet</h2>
+  <div class="cheat">
+    <div class="card g"><h3>Before code: decide</h3><table>
+      <tr><td><span class="cmd g">/grill-me</span></td><td>Stress-test any idea</td></tr>
+      <tr><td><span class="cmd g">/grill-with-docs</span></td><td>Same, plus CONTEXT.md & ADRs</td></tr>
+      <tr><td><span class="cmd m">/wayfinder</span></td><td>Idea too big for one session</td></tr>
+      <tr><td><span class="cmd m">/prototype</span></td><td>Throwaway code to answer one question</td></tr>
+    </table></div>
+    <div class="card i"><h3>Before code: design</h3><table>
+      <tr><td><span class="cmd i">/impeccable</span></td><td>Context-aware menu of next steps</td></tr>
+      <tr><td><span class="cmd i">shape</span></td><td>UX interview → design brief</td></tr>
+      <tr><td><span class="cmd i">critique</span></td><td>Scored UX review (do this first on a revamp)</td></tr>
+      <tr><td><span class="cmd i">document</span></td><td>Regenerate DESIGN.md from code</td></tr>
+    </table></div>
+    <div class="card"><h3>After code: build & judge</h3><table>
+      <tr><td><span class="cmd m">/to-spec</span> · <span class="cmd m">/to-tickets</span></td><td>Issue + slices on GitHub</td></tr>
+      <tr><td><span class="cmd m">/implement</span></td><td>Build tickets with /tdd</td></tr>
+      <tr><td><span class="cmd i">audit</span> · <span class="cmd i">polish</span> · <span class="cmd i">harden</span></td><td>a11y/perf, final pass, edge cases</td></tr>
+      <tr><td><span class="cmd m">/code-review</span></td><td>Standards + spec check</td></tr>
+    </table></div>
+  </div>
+
+  <h2 style="margin-top:48px">Traps to avoid</h2>
+  <div class="traps">
+    <div class="trap"><b>Skipping the homework</b><p>“Make bookmarks” gives you 6 rounds of basics. Five lines of pitch removes most of them.</p></div>
+    <div class="trap"><b>Saying yes before the frontier is empty</b><p>The grill won’t act until you confirm. Don’t confirm early to “get going”, because unasked questions become bugs.</p></div>
+    <div class="trap"><b>Not choosing refine vs redesign</b><p>Impeccable treats them very differently. Leave it vague and you get a muddled half-redesign.</p></div>
+    <div class="trap"><b>Using impeccable on backend work</b><p>It is UI-only. For modules, use grill + <code>codebase-design</code> + <code>tdd</code>.</p></div>
+    <div class="trap"><b>Answering fact questions yourself</b><p>If it asks “does the pipeline store segments by ID?”, tell it to look. Your job is decisions.</p></div>
+    <div class="trap"><b>Endless polish loops</b><p>Impeccable verifies in bounded passes. One critique, one fix batch, one confirm. Then ship.</p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">Based on the installed skills: mattpocock-skills 1.2.3 (grilling, grill-me, grill-with-docs, to-spec, to-tickets, implement, wayfinder, prototype) and impeccable 4.5.0. Repo conventions from AGENTS.md: GitHub Issues tracker, single CONTEXT.md + docs/adr/.</div></footer>
+
+<script>
+(function(){
+  // theme toggle
+  var root=document.documentElement, btn=document.getElementById('themeBtn');
+  function cur(){return root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')}
+  try{var saved=localStorage.getItem('guide-theme'); if(saved) root.setAttribute('data-theme',saved);}catch(e){}
+  function label(){btn.textContent=cur()==='dark'?'☀ light':'☾ dark'}
+  label();
+  btn.addEventListener('click',function(){var t=cur()==='dark'?'light':'dark';root.setAttribute('data-theme',t);try{localStorage.setItem('guide-theme',t)}catch(e){}label()});
+
+  // copy
+  document.querySelectorAll('[data-copy]').forEach(function(b){
+    b.addEventListener('click',function(){
+      var t=document.getElementById(b.dataset.copy).textContent;
+      (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent='copied'},function(){b.textContent='select & copy'});
+      setTimeout(function(){b.textContent='copy'},1600);
+    });
+  });
+
+  // tabs
+  var tabs=document.querySelectorAll('[role=tab]');
+  tabs.forEach(function(t){t.addEventListener('click',function(){
+    tabs.forEach(function(o){o.setAttribute('aria-selected','false');document.getElementById(o.getAttribute('aria-controls')).hidden=true});
+    t.setAttribute('aria-selected','true');document.getElementById(t.getAttribute('aria-controls')).hidden=false;
+  })});
+
+  // route picker
+  var state={kind:'feature',area:'both',size:'medium',look:'refine'};
+  document.querySelectorAll('.seg').forEach(function(seg){
+    seg.addEventListener('click',function(e){
+      var b=e.target.closest('button'); if(!b) return;
+      seg.querySelectorAll('button').forEach(function(x){x.setAttribute('aria-pressed',x===b?'true':'false')});
+      state[seg.dataset.q]=b.dataset.v; render();
+    });
+  });
+  function S(c,title,body){return {c:c,t:title,b:body}}
+  function render(){
+    var k=state.kind, a=state.area, z=state.size, ui=a!=='backend', be=a!=='ui';
+    document.getElementById('refineRow').hidden=!(k==='revamp'&&ui);
+    var r=[];
+    r.push(S('y','Do the homework (10 min)','Write the 5-line pitch: problem, who and when, done-looks-like, must-not-change, unsure-about.'+(k==='revamp'&&ui?' Decide: '+(state.look==='refine'?'<b>refine</b>, keeping the current look.':'<b>redesign</b>, replacing the look.'):'')));
+    if(z==='huge') r.push(S('m','<span class="cmd m">/wayfinder</span>','The idea is too big for one session. Chart a map of decision tickets on GitHub first. Then run the rest of this route once per ticket, as each becomes clear.'));
+    if(k==='revamp'&&ui) r.push(S('i','<span class="cmd i">/impeccable critique &lt;the module&gt;</span>','For a revamp, get a scored list of what’s wrong before deciding what to change. Bring it into the grill as evidence.'));
+    if(k==='revamp'&&be) r.push(S('y','Collect evidence','Real failing inputs, slow timings, confusing code paths. If it’s really a bug, use <span class="cmd m">/diagnosing-bugs</span> instead of a revamp.'));
+    if(z==='small'&&a==='ui') r.push(S('g','<span class="cmd g">/grill-me</span> (optional)','For a small UI tweak you can often skip it. Run it if you hesitated on any homework line.'));
+    else if(be) r.push(S('g','<span class="cmd g">/grill-with-docs</span>','Rounds of numbered questions with recommendations. Because the work touches the domain, it also updates CONTEXT.md and writes ADRs as decisions settle. Confirm only when the frontier is empty.'));
+    else r.push(S('g','<span class="cmd g">/grill-me</span>','Settle the behaviour: what it does, edge cases, what’s out of scope. Confirm only when the frontier is empty.'));
+    if(z!=='small') r.push(S('m','<span class="cmd m">/prototype</span> (only if stuck)','Can’t picture the state model or the look? Build something throwaway to answer just that question, then go back to the grill.'));
+    if(be&&z!=='small') r.push(S('m','<span class="cmd m">/codebase-design</span> (optional)','Pick the module interface and test seam so the change lands in one deep module.'));
+    if(ui){
+      if(z==='small'&&k==='revamp'&&state.look==='refine') r.push(S('i','<span class="cmd i">/impeccable &lt;layout | typeset | clarify | distill…&gt;</span>','For a small refinement, go straight to the matching command named by the critique. No brief needed.'));
+      else r.push(S('i','<span class="cmd i">/impeccable shape &lt;target&gt;</span>','UX discovery, 1–2 short rounds, then a design brief: job, states, layout intent, boundaries. No code. '+(k==='revamp'&&state.look==='redesign'?'Redesign walks a new visual direction and replaces DESIGN.md.':'Stays inside the existing DESIGN.md world.')+' Approve or correct it.'));
+    }
+    if(z==='small') r.push(S('m','Build directly','Ask Claude to implement what was agreed'+(be?', test-first with <span class="cmd m">/tdd</span>':'')+'. No spec or tickets needed at this size.'));
+    else{
+      r.push(S('m','<span class="cmd m">/to-spec</span>','Turns the conversation into a GitHub issue (user stories, decisions, test seams), labelled <code>ready-for-agent</code>. Check the seams it proposes.'));
+      r.push(S('m','<span class="cmd m">/to-tickets</span>','Splits it into vertical tracer-bullet slices with blocking edges. Tell it if the slices are too coarse or too fine.'));
+      r.push(S('m','<span class="cmd m">/implement</span>','One ticket at a time, test-first at the agreed seams. Click through the app between slices.'));
+    }
+    if(ui) r.push(S('i','<span class="cmd i">/impeccable audit</span> → <span class="cmd i">polish</span>','Check a11y, responsive and perf, then do a final quality pass. One round of fixes, one confirm, stop.'));
+    if(be||z!=='small') r.push(S('m','<span class="cmd m">/code-review</span>','Checks standards and checks the code against the spec. Fix what matters.'));
+    r.push(S('y','Ship','Commit, open a PR, close the issue. If a decision surprised you, it belongs in an ADR.'));
+    document.getElementById('route').innerHTML=r.map(function(s,i){return '<li><span class="n '+s.c+'">'+(i+1)+'</span><div><b>'+s.t+'</b><p>'+s.b+'</p></div></li>'}).join('');
+  }
+  render();
+})();
+</script>
+</body>
+</html>

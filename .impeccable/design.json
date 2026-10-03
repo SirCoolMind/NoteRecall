@@ -1,0 +1,1166 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-04T07:49:00+00:00",
+  "title": "Design System: NoteRecall",
+  "extensions": {
+    "colorMeta": {
+      "paper": {
+        "role": "neutral",
+        "displayName": "Listing Paper",
+        "canonical": "#f4f5f7",
+        "oklch": "oklch(97.0% 0.003 264.5)",
+        "tonalRamp": [
+          "#0b0b0c",
+          "#232425",
+          "#3f4041",
+          "#5d5e5f",
+          "#7c7d7f",
+          "#9d9ea0",
+          "#c3c4c6",
+          "#edeef0"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "Sheet White",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#d3d8e2",
+        "oklch": "oklch(88.1% 0.015 264.5)",
+        "tonalRamp": [
+          "#080b11",
+          "#20242b",
+          "#3c4048",
+          "#595e66",
+          "#797d86",
+          "#9a9ea8",
+          "#bfc4ce",
+          "#e9eff9"
+        ]
+      },
+      "rule-strong": {
+        "role": "neutral",
+        "displayName": "Strong Hairline",
+        "canonical": "#aeb7c8",
+        "oklch": "oklch(77.8% 0.026 263.3)",
+        "tonalRamp": [
+          "#060b16",
+          "#1d2431",
+          "#39404e",
+          "#565e6d",
+          "#757e8d",
+          "#969faf",
+          "#bbc4d6",
+          "#e7effe"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#111a2e",
+        "oklch": "oklch(22.0% 0.042 264.8)",
+        "tonalRamp": [
+          "#040a1c",
+          "#1a2438",
+          "#354056",
+          "#525e76",
+          "#717d97",
+          "#929fb9",
+          "#b7c4e0",
+          "#e7efff"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink Two",
+        "canonical": "#4a5670",
+        "oklch": "oklch(45.3% 0.045 265.4)",
+        "tonalRamp": [
+          "#040a1e",
+          "#19233a",
+          "#343f58",
+          "#515d78",
+          "#707d99",
+          "#919ebb",
+          "#b6c4e2",
+          "#e7efff"
+        ]
+      },
+      "masthead": {
+        "role": "primary",
+        "displayName": "Broadcast Navy",
+        "canonical": "#12306b",
+        "oklch": "oklch(32.5% 0.109 262.0)",
+        "tonalRamp": [
+          "#000729",
+          "#031e58",
+          "#1d3c79",
+          "#3a5c9b",
+          "#597cbe",
+          "#799ee3",
+          "#a6c5fc",
+          "#e6effe"
+        ]
+      },
+      "on-masthead": {
+        "role": "neutral",
+        "displayName": "On Masthead",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ]
+      },
+      "on-masthead-2": {
+        "role": "neutral",
+        "displayName": "Masthead Stroke",
+        "canonical": "#c3cfeb",
+        "oklch": "oklch(85.4% 0.041 267.1)",
+        "tonalRamp": [
+          "#050a1c",
+          "#1b2338",
+          "#363f56",
+          "#535d75",
+          "#727d96",
+          "#939eb9",
+          "#b8c4e0",
+          "#e7eeff"
+        ]
+      },
+      "action": {
+        "role": "primary",
+        "displayName": "Broadcast Navy Plate",
+        "canonical": "#12306b",
+        "oklch": "oklch(32.5% 0.109 262.0)",
+        "tonalRamp": [
+          "#000729",
+          "#031e58",
+          "#1d3c79",
+          "#3a5c9b",
+          "#597cbe",
+          "#799ee3",
+          "#a6c5fc",
+          "#e6effe"
+        ]
+      },
+      "on-action": {
+        "role": "neutral",
+        "displayName": "On Plate",
+        "canonical": "#ffffff",
+        "oklch": "oklch(100.0% 0.000 89.9)",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#242424",
+          "#404040",
+          "#5d5d5d",
+          "#7d7d7d",
+          "#9e9e9e",
+          "#c4c4c4",
+          "#eeeeee"
+        ]
+      },
+      "action-hover": {
+        "role": "primary",
+        "displayName": "Plate Hover Navy",
+        "canonical": "#1b3f86",
+        "oklch": "oklch(38.5% 0.126 262.1)",
+        "tonalRamp": [
+          "#000728",
+          "#011d5b",
+          "#173b81",
+          "#345aa4",
+          "#537bc8",
+          "#739ded",
+          "#a7c5fb",
+          "#e7effe"
+        ]
+      },
+      "on-air": {
+        "role": "secondary",
+        "displayName": "On Air Red",
+        "canonical": "#c81e24",
+        "oklch": "oklch(53.5% 0.202 26.3)",
+        "tonalRamp": [
+          "#1e0101",
+          "#4a0105",
+          "#7b070f",
+          "#ae121b",
+          "#dc3635",
+          "#fd665d",
+          "#fcaca4",
+          "#fee9e6"
+        ]
+      },
+      "on-air-soft": {
+        "role": "secondary",
+        "displayName": "On Air Tint",
+        "canonical": "#fbe6e6",
+        "oklch": "oklch(94.2% 0.023 17.6)",
+        "tonalRamp": [
+          "#140708",
+          "#2e2020",
+          "#4b3b3b",
+          "#6a5959",
+          "#8b7878",
+          "#ac9999",
+          "#d3bebf",
+          "#fee9e9"
+        ]
+      },
+      "next": {
+        "role": "tertiary",
+        "displayName": "Queue Amber Text",
+        "canonical": "#8a5a00",
+        "oklch": "oklch(50.8% 0.108 73.3)",
+        "tonalRamp": [
+          "#130900",
+          "#341f00",
+          "#583802",
+          "#7f5307",
+          "#a47228",
+          "#c7934c",
+          "#efb972",
+          "#feebd4"
+        ]
+      },
+      "next-fill": {
+        "role": "tertiary",
+        "displayName": "Queue Amber",
+        "canonical": "#f2b632",
+        "oklch": "oklch(81.1% 0.153 82.1)",
+        "tonalRamp": [
+          "#120a00",
+          "#302101",
+          "#533b06",
+          "#77580f",
+          "#a07509",
+          "#ca9411",
+          "#f5b936",
+          "#ffeccb"
+        ]
+      },
+      "processing": {
+        "role": "primary",
+        "displayName": "Processing Navy",
+        "canonical": "#12306b",
+        "oklch": "oklch(32.5% 0.109 262.0)",
+        "tonalRamp": [
+          "#000729",
+          "#031e58",
+          "#1d3c79",
+          "#3a5c9b",
+          "#597cbe",
+          "#799ee3",
+          "#a6c5fc",
+          "#e6effe"
+        ]
+      },
+      "processing-soft": {
+        "role": "primary",
+        "displayName": "Processing Tint",
+        "canonical": "#dfe6f5",
+        "oklch": "oklch(92.4% 0.022 265.8)",
+        "tonalRamp": [
+          "#070b14",
+          "#1f242f",
+          "#3a404c",
+          "#585e6a",
+          "#777d8b",
+          "#989eac",
+          "#bdc4d3",
+          "#e8effe"
+        ]
+      },
+      "focus": {
+        "role": "tertiary",
+        "displayName": "Focus Amber",
+        "canonical": "#f2b632",
+        "oklch": "oklch(81.1% 0.153 82.1)",
+        "tonalRamp": [
+          "#120a00",
+          "#302101",
+          "#533b06",
+          "#77580f",
+          "#a07509",
+          "#ca9411",
+          "#f5b936",
+          "#ffeccb"
+        ]
+      },
+      "selection": {
+        "role": "neutral",
+        "displayName": "Selection Blue",
+        "canonical": "#c9d6f2",
+        "oklch": "oklch(87.5% 0.041 265.7)",
+        "tonalRamp": [
+          "#040a1c",
+          "#1a2338",
+          "#353f56",
+          "#525d75",
+          "#727d97",
+          "#929eb9",
+          "#b7c4e0",
+          "#e7efff"
+        ]
+      },
+      "hit": {
+        "role": "tertiary",
+        "displayName": "Search Hit",
+        "canonical": "#fff1c2",
+        "oklch": "oklch(95.8% 0.062 93.4)",
+        "tonalRamp": [
+          "#100b00",
+          "#2d2300",
+          "#4b3f14",
+          "#695d33",
+          "#8a7d52",
+          "#ab9e72",
+          "#d2c496",
+          "#fceec0"
+        ]
+      },
+      "spk-0": {
+        "role": "tertiary",
+        "displayName": "Programme Blue",
+        "canonical": "#1f5fd1",
+        "oklch": "oklch(51.6% 0.188 261.0)",
+        "tonalRamp": [
+          "#000825",
+          "#021f55",
+          "#013691",
+          "#1354c5",
+          "#3677eb",
+          "#699df9",
+          "#a4c5fe",
+          "#e6efff"
+        ]
+      },
+      "spk-1": {
+        "role": "tertiary",
+        "displayName": "Programme Green",
+        "canonical": "#0b7a5c",
+        "oklch": "oklch(51.6% 0.102 167.7)",
+        "tonalRamp": [
+          "#000f09",
+          "#002c1f",
+          "#044c38",
+          "#0d6e53",
+          "#309071",
+          "#56b392",
+          "#7ddab7",
+          "#bfffe5"
+        ]
+      },
+      "spk-2": {
+        "role": "tertiary",
+        "displayName": "Programme Orange",
+        "canonical": "#a34a06",
+        "oklch": "oklch(51.5% 0.136 48.9)",
+        "tonalRamp": [
+          "#180600",
+          "#3e1700",
+          "#672c03",
+          "#934308",
+          "#bc6128",
+          "#e1824c",
+          "#fcb087",
+          "#feeae0"
+        ]
+      },
+      "spk-3": {
+        "role": "tertiary",
+        "displayName": "Programme Magenta",
+        "canonical": "#a8238f",
+        "oklch": "oklch(51.3% 0.200 337.2)",
+        "tonalRamp": [
+          "#1b0015",
+          "#420237",
+          "#6e085c",
+          "#9d1385",
+          "#c240a7",
+          "#e864ca",
+          "#ff9fe5",
+          "#ffe6f7"
+        ]
+      },
+      "spk-4": {
+        "role": "tertiary",
+        "displayName": "Programme Teal",
+        "canonical": "#0b6f86",
+        "oklch": "oklch(50.2% 0.088 219.4)",
+        "tonalRamp": [
+          "#000e13",
+          "#022933",
+          "#094757",
+          "#13687d",
+          "#3389a1",
+          "#58acc4",
+          "#7fd2eb",
+          "#d6f5ff"
+        ]
+      },
+      "spk-5": {
+        "role": "tertiary",
+        "displayName": "Programme Violet",
+        "canonical": "#6a3bd0",
+        "oklch": "oklch(49.9% 0.214 291.0)",
+        "tonalRamp": [
+          "#0e002b",
+          "#290361",
+          "#480e9c",
+          "#6534c9",
+          "#835aef",
+          "#a088fd",
+          "#c4bafc",
+          "#eeecfe"
+        ]
+      },
+      "spk-6": {
+        "role": "tertiary",
+        "displayName": "Programme Rust",
+        "canonical": "#b93a0a",
+        "oklch": "oklch(53.0% 0.171 37.3)",
+        "tonalRamp": [
+          "#1b0300",
+          "#431103",
+          "#721e01",
+          "#a33004",
+          "#ce4e25",
+          "#f5714a",
+          "#ffac94",
+          "#ffe9e3"
+        ]
+      },
+      "spk-7": {
+        "role": "tertiary",
+        "displayName": "Programme Olive",
+        "canonical": "#4b7a0c",
+        "oklch": "oklch(52.6% 0.140 131.7)",
+        "tonalRamp": [
+          "#050e00",
+          "#162b00",
+          "#2b4a02",
+          "#416c07",
+          "#5d8e29",
+          "#7eb04e",
+          "#a2d774",
+          "#d4feb1"
+        ]
+      },
+      "paper-dark": {
+        "role": "neutral",
+        "displayName": "Listing Paper (dark)",
+        "canonical": "#0b1730",
+        "oklch": "oklch(20.9% 0.053 263.3)",
+        "tonalRamp": [
+          "#020921",
+          "#16233d",
+          "#313f5c",
+          "#4e5e7c",
+          "#6d7e9d",
+          "#8d9fc0",
+          "#b3c5e7",
+          "#e7effe"
+        ]
+      },
+      "sheet-dark": {
+        "role": "neutral",
+        "displayName": "Sheet White (dark)",
+        "canonical": "#11203f",
+        "oklch": "oklch(24.9% 0.062 263.2)",
+        "tonalRamp": [
+          "#010825",
+          "#132342",
+          "#2e3f61",
+          "#4b5d81",
+          "#6a7da3",
+          "#8a9fc6",
+          "#afc5ee",
+          "#e6efff"
+        ]
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Hairline (dark)",
+        "canonical": "#2a3d68",
+        "oklch": "oklch(36.6% 0.078 264.8)",
+        "tonalRamp": [
+          "#01052b",
+          "#112149",
+          "#2b3e69",
+          "#485d8a",
+          "#667dac",
+          "#869ed0",
+          "#abc4f8",
+          "#e7effe"
+        ]
+      },
+      "rule-strong-dark": {
+        "role": "neutral",
+        "displayName": "Strong Hairline (dark)",
+        "canonical": "#3d5590",
+        "oklch": "oklch(46.0% 0.101 265.9)",
+        "tonalRamp": [
+          "#010034",
+          "#0d1e54",
+          "#263c74",
+          "#425b96",
+          "#617bb9",
+          "#819dde",
+          "#aac3fc",
+          "#e7effe"
+        ]
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Ink (dark)",
+        "canonical": "#eef2fb",
+        "oklch": "oklch(96.1% 0.013 266.7)",
+        "tonalRamp": [
+          "#090b11",
+          "#21242a",
+          "#3d4047",
+          "#5a5e65",
+          "#7a7d85",
+          "#9b9ea7",
+          "#c0c4cd",
+          "#eaeef7"
+        ]
+      },
+      "ink-2-dark": {
+        "role": "neutral",
+        "displayName": "Ink Two (dark)",
+        "canonical": "#a9b6d3",
+        "oklch": "oklch(77.6% 0.044 266.2)",
+        "tonalRamp": [
+          "#040a1d",
+          "#1a2339",
+          "#353f57",
+          "#525d77",
+          "#717d98",
+          "#929ebb",
+          "#b7c4e2",
+          "#e7effe"
+        ]
+      },
+      "masthead-dark": {
+        "role": "primary",
+        "displayName": "Night Navy (dark)",
+        "canonical": "#060f24",
+        "oklch": "oklch(17.3% 0.046 263.8)",
+        "tonalRamp": [
+          "#030a1e",
+          "#18233a",
+          "#334058",
+          "#505e78",
+          "#6f7d99",
+          "#909fbc",
+          "#b5c5e3",
+          "#e6efff"
+        ]
+      },
+      "action-dark": {
+        "role": "primary",
+        "displayName": "Pale Plate Blue (dark)",
+        "canonical": "#c9d6f2",
+        "oklch": "oklch(87.5% 0.041 265.7)",
+        "tonalRamp": [
+          "#040a1c",
+          "#1a2338",
+          "#353f56",
+          "#525d75",
+          "#727d97",
+          "#929eb9",
+          "#b7c4e0",
+          "#e7efff"
+        ]
+      },
+      "on-action-dark": {
+        "role": "neutral",
+        "displayName": "On Plate (dark)",
+        "canonical": "#0b1730",
+        "oklch": "oklch(20.9% 0.053 263.3)",
+        "tonalRamp": [
+          "#020921",
+          "#16233d",
+          "#313f5c",
+          "#4e5e7c",
+          "#6d7e9d",
+          "#8d9fc0",
+          "#b3c5e7",
+          "#e7effe"
+        ]
+      },
+      "action-hover-dark": {
+        "role": "primary",
+        "displayName": "Plate Hover Navy (dark)",
+        "canonical": "#dbe4f7",
+        "oklch": "oklch(91.8% 0.028 265.4)",
+        "tonalRamp": [
+          "#060b17",
+          "#1e2432",
+          "#39404f",
+          "#565e6e",
+          "#757d8e",
+          "#969fb0",
+          "#bbc4d7",
+          "#e7efff"
+        ]
+      },
+      "on-air-dark": {
+        "role": "secondary",
+        "displayName": "On Air Red (dark)",
+        "canonical": "#ff5a5c",
+        "oklch": "oklch(68.9% 0.201 23.4)",
+        "tonalRamp": [
+          "#1e0102",
+          "#4a0109",
+          "#7a0716",
+          "#ae1225",
+          "#db363f",
+          "#fc6665",
+          "#fcaca7",
+          "#fee9e7"
+        ]
+      },
+      "on-air-soft-dark": {
+        "role": "secondary",
+        "displayName": "On Air Tint (dark)",
+        "canonical": "#3a1426",
+        "oklch": "oklch(25.7% 0.065 353.0)",
+        "tonalRamp": [
+          "#1c000d",
+          "#3b1527",
+          "#5a3143",
+          "#7a4e61",
+          "#9c6d81",
+          "#bf8ea2",
+          "#e7b3c8",
+          "#ffe7f0"
+        ]
+      },
+      "next-dark": {
+        "role": "tertiary",
+        "displayName": "Queue Amber Text (dark)",
+        "canonical": "#f2b632",
+        "oklch": "oklch(81.1% 0.153 82.1)",
+        "tonalRamp": [
+          "#120a00",
+          "#302101",
+          "#533b06",
+          "#77580f",
+          "#a07509",
+          "#ca9411",
+          "#f5b936",
+          "#ffeccb"
+        ]
+      },
+      "processing-dark": {
+        "role": "primary",
+        "displayName": "Signal Blue (dark)",
+        "canonical": "#79a7ff",
+        "oklch": "oklch(73.3% 0.138 262.5)",
+        "tonalRamp": [
+          "#00062b",
+          "#001a60",
+          "#133987",
+          "#3159aa",
+          "#4f7ace",
+          "#6f9df4",
+          "#a7c5fb",
+          "#e7effe"
+        ]
+      },
+      "processing-soft-dark": {
+        "role": "primary",
+        "displayName": "Processing Tint (dark)",
+        "canonical": "#18305e",
+        "oklch": "oklch(31.7% 0.087 262.0)",
+        "tonalRamp": [
+          "#000827",
+          "#0a214d",
+          "#253e6e",
+          "#425d8f",
+          "#607db2",
+          "#819fd5",
+          "#a5c5fd",
+          "#e6efff"
+        ]
+      },
+      "selection-dark": {
+        "role": "neutral",
+        "displayName": "Selection Blue (dark)",
+        "canonical": "#2a4a8a",
+        "oklch": "oklch(42.0% 0.113 262.6)",
+        "tonalRamp": [
+          "#00062a",
+          "#031d59",
+          "#1d3c7b",
+          "#3a5b9d",
+          "#587cc0",
+          "#789ee5",
+          "#a6c5fe",
+          "#e6efff"
+        ]
+      },
+      "hit-dark": {
+        "role": "tertiary",
+        "displayName": "Search Hit (dark)",
+        "canonical": "#4a3c0e",
+        "oklch": "oklch(36.2% 0.065 91.4)",
+        "tonalRamp": [
+          "#100a00",
+          "#2d2302",
+          "#4c3e11",
+          "#6b5c31",
+          "#8b7c50",
+          "#ad9e70",
+          "#d3c394",
+          "#feeebe"
+        ]
+      },
+      "spk-0-dark": {
+        "role": "tertiary",
+        "displayName": "Programme Blue (dark)",
+        "canonical": "#79a7ff",
+        "oklch": "oklch(73.3% 0.138 262.5)",
+        "tonalRamp": [
+          "#00062b",
+          "#001a60",
+          "#133987",
+          "#3159aa",
+          "#4f7ace",
+          "#6f9df4",
+          "#a7c5fb",
+          "#e7effe"
+        ]
+      },
+      "spk-1-dark": {
+        "role": "tertiary",
+        "displayName": "Programme Green (dark)",
+        "canonical": "#3fd0a4",
+        "oklch": "oklch(77.0% 0.138 168.3)",
+        "tonalRamp": [
+          "#000f09",
+          "#022c1f",
+          "#084b39",
+          "#136e54",
+          "#0d9370",
+          "#16b98e",
+          "#54e0b4",
+          "#c1fee6"
+        ]
+      },
+      "spk-2-dark": {
+        "role": "tertiary",
+        "displayName": "Programme Orange (dark)",
+        "canonical": "#f0a840",
+        "oklch": "oklch(78.3% 0.143 72.4)",
+        "tonalRamp": [
+          "#130900",
+          "#331f02",
+          "#573808",
+          "#805200",
+          "#a97011",
+          "#d48e1a",
+          "#fcb44e",
+          "#ffebd4"
+        ]
+      },
+      "spk-3-dark": {
+        "role": "tertiary",
+        "displayName": "Programme Magenta (dark)",
+        "canonical": "#f080dc",
+        "oklch": "oklch(75.4% 0.175 334.2)",
+        "tonalRamp": [
+          "#1a0016",
+          "#42003a",
+          "#6d0461",
+          "#942985",
+          "#b84da7",
+          "#dd6fca",
+          "#fe9eeb",
+          "#fee6f9"
+        ]
+      },
+      "spk-4-dark": {
+        "role": "tertiary",
+        "displayName": "Programme Teal (dark)",
+        "canonical": "#5ccfe0",
+        "oklch": "oklch(79.5% 0.106 208.5)",
+        "tonalRamp": [
+          "#000e11",
+          "#032a2f",
+          "#0b4850",
+          "#016a76",
+          "#168d9c",
+          "#38b0c1",
+          "#65d7e8",
+          "#ccf8ff"
+        ]
+      },
+      "spk-5-dark": {
+        "role": "tertiary",
+        "displayName": "Programme Violet (dark)",
+        "canonical": "#b79bff",
+        "oklch": "oklch(75.4% 0.143 295.7)",
+        "tonalRamp": [
+          "#100128",
+          "#2e005f",
+          "#492781",
+          "#6648a4",
+          "#8569c8",
+          "#a68aed",
+          "#c9b8fb",
+          "#efecfe"
+        ]
+      },
+      "spk-6-dark": {
+        "role": "tertiary",
+        "displayName": "Programme Rust (dark)",
+        "canonical": "#ff8f66",
+        "oklch": "oklch(76.3% 0.147 40.6)",
+        "tonalRamp": [
+          "#1a0400",
+          "#411403",
+          "#6f2301",
+          "#9e3704",
+          "#c35930",
+          "#e97b53",
+          "#ffad90",
+          "#ffe9e2"
+        ]
+      },
+      "spk-7-dark": {
+        "role": "tertiary",
+        "displayName": "Programme Olive (dark)",
+        "canonical": "#a8d860",
+        "oklch": "oklch(82.3% 0.158 127.7)",
+        "tonalRamp": [
+          "#070e00",
+          "#1b2903",
+          "#314801",
+          "#4a6a04",
+          "#648c16",
+          "#82b034",
+          "#a7d75f",
+          "#d7ffa4"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Drop-slot headline only."
+      },
+      "time": {
+        "displayName": "Time",
+        "purpose": "Schedule row start times."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Meeting title, readiness title."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Wordmark, schedule group titles, drawer, dialog and summary headings."
+      },
+      "row-title": {
+        "displayName": "Row Title",
+        "purpose": "Meeting titles on schedule rows."
+      },
+      "transcript": {
+        "displayName": "Transcript",
+        "purpose": "Transcript text at a 72ch measure."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "UI body and inputs."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Secondary lines, hints, meta."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Plate, tab and ribbon-clock labels; speaker names."
+      },
+      "label-small": {
+        "displayName": "Label Small",
+        "purpose": "Outline buttons, BM/EN toggle, back link."
+      },
+      "status": {
+        "displayName": "Status",
+        "purpose": "Status pills, uppercase."
+      },
+      "meta": {
+        "displayName": "Meta",
+        "purpose": "Ribbon tick labels and speaker chips; the 14px floor."
+      },
+      "code": {
+        "displayName": "Code",
+        "purpose": "Shell commands, paths and inline code only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "menu-lift",
+        "value": "var(--shadow-pop)",
+        "purpose": "Download format menu and overflow menu."
+      },
+      {
+        "name": "dialog-lift",
+        "value": "var(--shadow-modal)",
+        "purpose": "Confirmation dialogs, over a 62% navy backdrop."
+      },
+      {
+        "name": "drawer-edge",
+        "value": "var(--shadow-drawer)",
+        "purpose": "Settings drawer, over a 55% navy scrim."
+      },
+      {
+        "name": "focus-ring",
+        "value": "0 0 0 2px var(--ink)",
+        "purpose": "Ink gap ring paired with outline: 3px solid var(--focus), offset 2px, on every focusable element."
+      },
+      {
+        "name": "plate-focus",
+        "value": "0 0 0 2px var(--action), 0 0 0 5px var(--on-action)",
+        "purpose": "Focus on controls sitting on the reversed plate."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Exponential ease-out for every transition."
+      },
+      {
+        "name": "t-fast",
+        "value": "140ms",
+        "purpose": "Hover and press colour changes."
+      },
+      {
+        "name": "t-ui",
+        "value": "220ms",
+        "purpose": "Playhead glide, progress width, scrim fade."
+      },
+      {
+        "name": "t-drawer",
+        "value": "320ms",
+        "purpose": "Settings drawer slide."
+      },
+      {
+        "name": "stripes",
+        "value": "900ms linear infinite (bar); 1200ms (pill)",
+        "purpose": "Processing stripes drift; stopped under reduced motion."
+      },
+      {
+        "name": "lamp",
+        "value": "1600ms ease-in-out infinite",
+        "purpose": "On Now lamp pulse; stopped under reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "narrow",
+        "value": "720px"
+      },
+      {
+        "name": "compact",
+        "value": "900px"
+      },
+      {
+        "name": "design-target",
+        "value": "1024px"
+      },
+      {
+        "name": "page-max",
+        "value": "1200px"
+      }
+    ],
+    "provenance": {
+      "rasters": "None shipped; the UI is CSS and inline SVG only.",
+      "icons": "Lucide (lucide-static), ISC licence, vendored SVG in static/icons/ with LICENSE.txt.",
+      "fonts": "Barlow 400/500/600 and Barlow Semi Condensed 600/700, SIL OFL, self-hosted woff2 in static/fonts/ with OFL.txt.",
+      "scripts": "Alpine.js vendored in static/vendor/; no CDN."
+    }
+  },
+  "components": [
+    {
+      "name": "Download Split Plate",
+      "kind": "button",
+      "refersTo": "button-plate",
+      "description": "The one reversed plate on a meeting: the Download action plus its format-menu chevron.",
+      "html": "<div class=\"ds-split\"><button class=\"ds-split__main\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"M12 15V3\" /><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /><path d=\"m7 10 5 5 5-5\" /></svg><span>Download .txt</span></button><button class=\"ds-split__more\" aria-label=\"Choose format\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"m6 9 6 6 6-6\" /></svg></button></div>",
+      "css": ".ds-split { display: inline-flex; } .ds-split__main, .ds-split__more { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; background: var(--action); color: var(--on-action); border: 0; cursor: pointer; transition: background-color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-split__main { gap: 8px; padding: 0 16px; border-radius: 6px 0 0 6px; font: 700 1.0625rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; letter-spacing: 0.02em; white-space: nowrap; } .ds-split__more { width: 44px; padding: 0; border-radius: 0 6px 6px 0; border-left: 1px solid color-mix(in srgb, var(--on-action) 38%, var(--action)); } .ds-split__main:hover, .ds-split__more:hover { background: var(--action-hover); } .ds-split__main:focus-visible, .ds-split__more:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ink); }"
+    },
+    {
+      "name": "Drop Slot Plate",
+      "kind": "custom",
+      "refersTo": "drop-slot-plate",
+      "description": "Home's single reversed plate: the drop target, its inverse button, and the upload options as editable text.",
+      "html": "<div class=\"ds-drop\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"48\" height=\"48\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"M12 3v12\" /><path d=\"m17 8-5-5-5 5\" /><path d=\"M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4\" /></svg><h2 class=\"ds-drop__title\">Next recording</h2><div class=\"ds-drop__pick\"><button class=\"ds-plate-btn\">Choose a recording</button><span>or drop it on this slot. Transcription starts straight away.</span></div><div class=\"ds-drop__opts\"><span>Language <u class=\"ds-opt\">Auto</u></span><span>Speakers <u class=\"ds-opt\">Auto</u></span></div></div>",
+      "css": ".ds-drop { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 32px 48px; background: var(--action); color: var(--on-action); border-radius: 3px; font: 400 1.0625rem/1.55 Barlow, \"Segoe UI\", sans-serif; } .ds-drop__title { margin: 0; font: 700 clamp(1.875rem, 4.5vw, 2.75rem)/1.15 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; } .ds-drop__pick, .ds-drop__opts { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 32px; } .ds-plate-btn { min-height: 44px; padding: 0 24px; border: 0; border-radius: 6px; background: var(--on-action); color: var(--action); cursor: pointer; font: 700 1.0625rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; letter-spacing: 0.02em; transition: opacity 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-plate-btn:hover { opacity: 0.88; } .ds-plate-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--action), 0 0 0 5px var(--on-action); } .ds-opt { font: 700 1.0625rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; text-decoration: underline dashed; text-underline-offset: 0.3em; text-decoration-thickness: 2px; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "The quiet default button: Retry, Copy, Test, dialog Cancel.",
+      "html": "<button class=\"ds-btn\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\" /><path d=\"M21 3v5h-5\" /><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\" /><path d=\"M8 16H3v5\" /></svg><span>Retry</span></button>",
+      "css": ".ds-btn { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; gap: 8px; background: transparent; color: var(--ink); border: 1px solid var(--rule-strong); border-radius: 6px; cursor: pointer; font: 600 0.9375rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; transition: background-color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn:hover { background: var(--paper); } .ds-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ink); } .ds-btn:disabled { opacity: 0.6; cursor: default; }"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Confirms a destructive action inside the delete dialog.",
+      "html": "<button class=\"ds-btn-danger\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"M10 11v6\" /><path d=\"M14 11v6\" /><path d=\"M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6\" /><path d=\"M3 6h18\" /><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\" /></svg><span>Delete meeting</span></button>",
+      "css": ".ds-btn-danger { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; gap: 8px; background: var(--on-air-soft); color: var(--on-air); border: 2px solid var(--on-air); border-radius: 6px; cursor: pointer; font: 600 0.9375rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; transition: background-color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-btn-danger:hover { background: var(--on-air); color: var(--sheet); } .ds-btn-danger:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ink); }"
+    },
+    {
+      "name": "Search Box",
+      "kind": "input",
+      "refersTo": "search-box",
+      "description": "Transcript search in the tab header; the whole box takes the focus ring.",
+      "html": "<label class=\"ds-find\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"m21 21-4.34-4.34\" /><circle cx=\"11\" cy=\"11\" r=\"8\" /></svg><input class=\"ds-find__input\" type=\"search\" placeholder=\"Search transcript\"></label>",
+      "css": ".ds-find { display: flex; align-items: center; width: 20rem; max-width: 100%; height: 44px; padding-left: 12px; box-sizing: border-box; background: var(--sheet); box-shadow: inset 0 0 0 1px var(--rule-strong); border-radius: 6px; color: var(--ink-2); cursor: text; } .ds-find:focus-within { box-shadow: inset 0 0 0 1px var(--ink); outline: 3px solid var(--focus); outline-offset: 2px; } .ds-find__input { flex: 1; min-width: 0; height: 100%; padding: 0 8px; background: transparent; color: var(--ink); border: 0; outline: none; font: 400 1.0625rem/1.2 Barlow, \"Segoe UI\", sans-serif; } .ds-find__input::placeholder { color: var(--ink-2); opacity: 1; }"
+    },
+    {
+      "name": "Masthead",
+      "kind": "nav",
+      "refersTo": "masthead",
+      "description": "The sticky navy shell: wordmark left; BM/EN toggle, theme and Settings right.",
+      "html": "<header class=\"ds-mast\"><span class=\"ds-mast__mark\">NoteRecall</span><div class=\"ds-mast__tools\"><div class=\"ds-seg\"><button class=\"ds-seg__btn\">BM</button><button class=\"ds-seg__btn\" aria-pressed=\"true\">EN</button></div><button class=\"ds-icon-btn\" aria-label=\"Theme\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401\" /></svg></button><button class=\"ds-icon-btn\" aria-label=\"Settings\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915\" /><circle cx=\"12\" cy=\"12\" r=\"3\" /></svg></button></div></header>",
+      "css": ".ds-mast { height: 64px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: var(--masthead); color: var(--on-masthead); } .ds-mast__mark { font: 700 1.375rem/1.15 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; } .ds-mast__tools { display: flex; align-items: center; gap: 12px; } .ds-seg { display: inline-flex; border: 1px solid var(--on-masthead-2); border-radius: 6px; overflow: hidden; } .ds-seg__btn { min-width: 44px; min-height: 44px; padding: 0 12px; border: 0; background: transparent; color: var(--on-masthead); cursor: pointer; font: 600 0.9375rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; letter-spacing: 0.02em; transition: background-color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-seg__btn:hover, .ds-icon-btn:hover { background: color-mix(in srgb, var(--on-masthead) 16%, transparent); } .ds-seg__btn[aria-pressed=\"true\"] { background: var(--on-masthead); color: var(--masthead); } .ds-seg__btn:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; } .ds-icon-btn { width: 44px; height: 44px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--on-masthead-2); border-radius: 6px; background: transparent; color: var(--on-masthead); cursor: pointer; transition: background-color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-icon-btn:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ink); }"
+    },
+    {
+      "name": "Status Pills",
+      "kind": "chip",
+      "refersTo": "status-processing",
+      "description": "Status by form as well as colour: outlined amber queued, drifting navy stripes processing, solid low-value ready, red-outlined failed with an icon.",
+      "html": "<div class=\"ds-pills\"><span class=\"ds-pill ds-pill--queued\">Queued</span><span class=\"ds-pill ds-pill--processing\">Processing</span><span class=\"ds-pill ds-pill--ready\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"M20 6 9 17l-5-5\" /></svg>Ready</span><span class=\"ds-pill ds-pill--failed\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" /></svg>Failed</span></div>",
+      "css": ".ds-pills { display: flex; flex-wrap: wrap; gap: 12px; } .ds-pill { min-height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; border-radius: 3px; font: 700 0.9375rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; letter-spacing: 0.03em; text-transform: uppercase; } .ds-pill--queued { border: 2px solid var(--next-fill); color: var(--next); } .ds-pill--processing { color: var(--paper); background: repeating-linear-gradient(135deg, var(--processing) 0 10px, color-mix(in srgb, var(--processing) 72%, var(--ink)) 10px 20px); background-size: 28.28px 28.28px; animation: ds-stripes 1200ms linear infinite; } @keyframes ds-stripes { to { background-position: 28.28px 0; } } .ds-pill--ready { background: var(--processing-soft); color: var(--ink); } .ds-pill--failed { background: var(--on-air-soft); color: var(--on-air); border: 2px solid var(--on-air); } @media (prefers-reduced-motion: reduce) { .ds-pill--processing { animation: none; } }"
+    },
+    {
+      "name": "Schedule Row",
+      "kind": "card",
+      "refersTo": "schedule-row",
+      "description": "One programme slot: big tabular time, title (the row's link), right-aligned duration, status.",
+      "html": "<ul class=\"ds-rows\"><li class=\"ds-row\"><span class=\"ds-row__time\">14:00</span><span class=\"ds-row__body\"><a class=\"ds-row__title\" href=\"#\">Client kickoff, Q4 roadmap</a><span class=\"ds-row__meta\">Fri 2 Oct</span></span><span class=\"ds-row__dur\">1 h 35 min</span><span class=\"ds-pill-ready\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"M20 6 9 17l-5-5\" /></svg>Ready</span></li><li class=\"ds-row ds-row--failed\"><span class=\"ds-row__time\">16:40</span><span class=\"ds-row__body\"><span class=\"ds-row__title\">Retrospektif sprint 14</span><span class=\"ds-row__meta\">Thu 1 Oct</span></span><span class=\"ds-row__dur\">-</span><span class=\"ds-pill-failed\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"18\" height=\"18\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3\" /><path d=\"M12 9v4\" /><path d=\"M12 17h.01\" /></svg>Failed</span></li></ul>",
+      "css": ".ds-rows { list-style: none; margin: 0; padding: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 3px; color: var(--ink); } .ds-row { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr) 7rem 8rem; align-items: center; gap: 16px; min-height: 80px; padding: 12px 16px; box-sizing: border-box; border-top: 1px solid var(--rule); cursor: pointer; } .ds-row:first-child { border-top: 0; } .ds-row:hover { background: var(--paper); } .ds-row:focus-within { outline: 3px solid var(--focus); outline-offset: -3px; } .ds-row__time { font: 700 2.25rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; font-variant-numeric: tabular-nums; } .ds-row__body { display: grid; gap: 4px; min-width: 0; } .ds-row__title { color: inherit; text-decoration: none; font: 600 1.25rem/1.15 Barlow, \"Segoe UI\", sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-row__title:hover { text-decoration: underline; text-decoration-thickness: 2px; } .ds-row__title:focus-visible { outline: none; } .ds-row__meta { color: var(--ink-2); font: 400 0.9375rem/1.4 Barlow, \"Segoe UI\", sans-serif; } .ds-row__dur { text-align: right; color: var(--ink-2); font: 600 1.0625rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; font-variant-numeric: tabular-nums; } .ds-pill-ready, .ds-pill-failed { justify-self: end; min-height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; border-radius: 3px; font: 700 0.9375rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; letter-spacing: 0.03em; text-transform: uppercase; } .ds-pill-ready { background: var(--processing-soft); color: var(--ink); } .ds-pill-failed { background: var(--on-air-soft); color: var(--on-air); border: 2px solid var(--on-air); } .ds-row--failed .ds-row__time, .ds-row--failed .ds-row__title { color: var(--on-air); text-decoration: line-through; text-decoration-thickness: 2px; }"
+    },
+    {
+      "name": "Speaker Ribbon",
+      "kind": "custom",
+      "refersTo": "ribbon-track",
+      "description": "The signature EPG lane grid: a lane per speaker, time ticks, and the On Air playhead crossing every lane.",
+      "html": "<div class=\"ds-ribbon\"><button class=\"ds-ribbon__play\" aria-label=\"Play\"><svg aria-hidden=\"true\" xmlns=\"http://www.w3.org/2000/svg\" width=\"22\" height=\"22\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" ><path d=\"M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z\" /></svg></button><span class=\"ds-ribbon__clock\">38:01 <span>/ 1:35:00</span></span><div class=\"ds-track\"><div class=\"ds-track__names\"><span class=\"ds-chip\" style=\"background:var(--spk-0)\">Nurul</span><span class=\"ds-chip\" style=\"background:var(--spk-1)\">Daniel</span><span class=\"ds-chip\" style=\"background:var(--spk-2)\">Mei Ling</span></div><div class=\"ds-track__plot\"><div class=\"ds-lane\" style=\"top:4px\"><i style=\"left:4%;width:9%;background:var(--spk-0)\"></i><i style=\"left:40%;width:12%;background:var(--spk-0)\"></i></div><div class=\"ds-lane\" style=\"top:16px\"><i style=\"left:14%;width:20%;background:var(--spk-1)\"></i><i style=\"left:70%;width:8%;background:var(--spk-1)\"></i></div><div class=\"ds-lane\" style=\"top:28px\"><i style=\"left:54%;width:14%;background:var(--spk-2)\"></i><i style=\"left:82%;width:12%;background:var(--spk-2)\"></i></div><span class=\"ds-tick\" style=\"left:0\"><b>0:00</b></span><span class=\"ds-tick\" style=\"left:33%\"><b>30:00</b></span><span class=\"ds-tick\" style=\"left:66%\"><b>1:00:00</b></span><span class=\"ds-playhead\" style=\"left:40%\"><span></span></span></div></div></div>",
+      "css": ".ds-ribbon { display: flex; align-items: center; gap: 16px; padding: 12px 16px; background: var(--sheet); border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule-strong); color: var(--ink); } .ds-ribbon__play { flex: none; width: 44px; height: 44px; display: inline-flex; align-items: center; justify-content: center; background: transparent; color: var(--ink); border: 2px solid var(--ink); border-radius: 6px; cursor: pointer; transition: background-color 140ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-ribbon__play:hover { background: var(--paper); } .ds-ribbon__play:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ink); } .ds-ribbon__clock { flex: none; white-space: nowrap; font: 700 1.0625rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; font-variant-numeric: tabular-nums; } .ds-ribbon__clock span { color: var(--ink-2); } .ds-track { position: relative; flex: 1 1 240px; height: 56px; box-sizing: border-box; display: flex; gap: 12px; padding: 0 12px; background: var(--paper); border: 1px solid var(--rule-strong); border-radius: 3px; cursor: pointer; } .ds-track__names { flex: none; display: flex; flex-direction: column; justify-content: center; gap: 2px; } .ds-chip { height: 17px; padding: 0 8px; border-radius: 3px; color: var(--sheet); font: 700 0.875rem/17px \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; white-space: nowrap; } .ds-track__plot { position: relative; flex: 1; } .ds-lane { position: absolute; left: 0; right: 0; height: 8px; background: color-mix(in srgb, var(--rule) 70%, transparent); } .ds-lane i { position: absolute; top: 0; bottom: 0; } .ds-tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid color-mix(in srgb, var(--rule-strong) 60%, transparent); } .ds-tick b { position: absolute; bottom: 0; left: 3px; color: var(--ink-2); font: 600 0.875rem/1 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; white-space: nowrap; } .ds-playhead { position: absolute; top: -6px; bottom: -6px; width: 3px; margin-left: -1.5px; background: var(--on-air); outline: 1px solid var(--sheet); transition: left 220ms cubic-bezier(0.16, 1, 0.3, 1); } .ds-playhead span { position: absolute; top: -6px; left: 50%; width: 13px; height: 13px; margin-left: -6.5px; border-radius: 50%; background: var(--on-air); outline: 2px solid var(--sheet); }"
+    },
+    {
+      "name": "Transcript Line",
+      "kind": "custom",
+      "refersTo": "transcript-line",
+      "description": "The time | speaker | text listing; the current line takes the On Air wash.",
+      "html": "<ol class=\"ds-lines\"><li class=\"ds-line\"><button class=\"ds-line__time\">37:51</button><span></span><p class=\"ds-line__text\">Lepas ni kita akan fokus pada user stories untuk modul pertama.</p></li><li class=\"ds-line ds-line--now\"><button class=\"ds-line__time\">37:57</button><button class=\"ds-who\" style=\"color:var(--spk-1)\">Daniel</button><p class=\"ds-line__text\">Let me share my screen so everyone can see the current wireframes. Betul tak?</p></li></ol>",
+      "css": ".ds-lines { list-style: none; margin: 0; padding: 0; background: var(--sheet); border: 1px solid var(--rule); border-radius: 3px; color: var(--ink); } .ds-line { display: grid; grid-template-columns: 5.5rem 11rem minmax(0, 1fr); column-gap: 16px; align-items: start; padding: 0 16px; cursor: pointer; } .ds-line:hover { background: var(--paper); } .ds-line--now { background: color-mix(in srgb, var(--on-air) 8%, var(--sheet)); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-air) 45%, var(--sheet)); } .ds-line__time { min-height: 44px; padding: 8px 0; text-align: left; background: transparent; border: 0; color: var(--ink-2); cursor: pointer; font: 600 0.9375rem/1.85rem \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; font-variant-numeric: tabular-nums; } .ds-line__time:hover { color: var(--ink); text-decoration: underline; } .ds-line--now .ds-line__time { color: var(--on-air); font-weight: 700; } .ds-who { min-height: 44px; padding: 0; text-align: left; background: transparent; border: 0; cursor: pointer; font: 700 1.0625rem/1.65 \"Barlow Semi Condensed\", \"Arial Narrow\", sans-serif; text-decoration: underline dashed; text-underline-offset: 0.3em; text-decoration-thickness: 1.5px; } .ds-who:hover { text-decoration-style: solid; } .ds-line__time:focus-visible, .ds-who:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; box-shadow: 0 0 0 2px var(--ink); } .ds-line__text { max-width: 72ch; margin: 0; padding: 8px 0; font: 400 1.125rem/1.65 Barlow, \"Segoe UI\", sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Jadual Siaran",
+    "overview": "Every meeting is a programme on the user's own broadcast schedule: who is on, when, and what comes next. The model is an RTM-era printed programme listing. A broadcast-navy masthead sits over a cool listing-paper ground. Programmes sit in square-cut slots divided by hairline rules, and big condensed times are set in tabular figures. One hot colour, the On Air red, marks what is live and what has failed. Eight speaker hues act as programme colours, in the speaker ribbon, on speaker names, and in the speaking-time split.\n\nThe system is in Operate mode. The task is to drop a recording, wait, and download the transcript, so the world comes through in precise details rather than decoration: the slot grid, the times, the EPG lane ribbon with its gliding playhead, and status shown by form as well as colour. Density is that of a listing. Rows are at least 80px tall and every control is at least 44px. Reading surfaces hold a 72ch measure. Light and dark themes follow the OS, and the masthead lets the user override the choice. Dark mode is a night broadcast: navy ground, a near-black masthead and a pale-blue action plate.\n\nProvenance: the UI ships no rasters. Everything is drawn in CSS and inline SVG. The icons are Lucide (lucide-static, ISC licence), vendored as SVG in `static/icons/` with `LICENSE.txt`. Barlow and Barlow Semi Condensed are self-hosted woff2 files in `static/fonts/` under the SIL OFL (`OFL.txt`). Alpine.js is vendored in `static/vendor/`. Nothing loads from a CDN.",
+    "keyCharacteristics": [
+      "A broadcast-navy masthead over a cool paper ground, with white sheets for work surfaces.",
+      "Square-cut listing slots separated by 1px hairlines rather than cards with shadows.",
+      "Barlow Semi Condensed in tabular figures for every time, label, heading and number.",
+      "One reversed plate per screen for the single next action.",
+      "On Air red only for the live moment and for failure.",
+      "Status shown by form as well as colour: outlined, striped, solid, struck.",
+      "Eight speaker programme colours, tuned separately for each theme."
+    ],
+    "rules": [
+      {
+        "name": "The One Plate Rule",
+        "body": "Each screen has exactly one reversed plate (`action` fill with `on-action` text), and it carries the single next action. That is the drop slot on Home, the Download split button on a meeting, and \"Set up everything\" while the readiness panel is open, in which case the drop slot is switched off into a dashed paper outline. Everything else is an outline, plain text, or a low-value status chip.",
+        "section": "colors"
+      },
+      {
+        "name": "The On Air Rule",
+        "body": "Red means live or failed, and nothing else. The live uses are the playhead, the lamps and the current transcript line. Failure is always also struck through and carries an icon, so the colour never carries the meaning alone.",
+        "section": "colors"
+      },
+      {
+        "name": "The Status-By-Form Rule",
+        "body": "Each status has its own form as well as its colour. Queued is an amber outline, processing is drifting navy stripes, ready is a solid low-value fill, and failed is a red outline with a warning icon plus struck-through red time and title. A new status needs a new form, not just a new hue.",
+        "section": "colors"
+      },
+      {
+        "name": "The Slot Face Rule",
+        "body": "Times, durations, counts, labels and headings use Barlow Semi Condensed, and any number uses tabular figures. Durations and percentages are right-aligned so their digits line up down the listing. Running text never uses the slot face.",
+        "section": "typography"
+      },
+      {
+        "name": "The 14px Floor Rule",
+        "body": "Nothing is smaller than 14px (`0.875rem`), anywhere, including tick labels and chips.",
+        "section": "typography"
+      },
+      {
+        "name": "The Real-Code Rule",
+        "body": "Monospace appears only where the user would copy or recognise literal code: install steps, file paths, and inline code in summaries.",
+        "section": "typography"
+      },
+      {
+        "name": "The 44 Rule",
+        "body": "Anything clickable is at least 44px in its smaller dimension (`--target`). Inline edit, search and stepping controls, chips that act as links, and select-as-text options all meet this.",
+        "section": "layout"
+      },
+      {
+        "name": "The Hairline Rule",
+        "body": "Use a 1px rule in `rule` or `rule-strong` to separate listings, rows, sections and the tab header. If a resting surface seems to need a shadow, it needs a hairline.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** take every colour, size, space and duration from the custom properties in `static/css/tokens.css`, and define each new colour for both themes.",
+      "**Do** give each screen exactly one reversed plate, and switch competing plates off (as the locked drop slot does) rather than letting two coexist.",
+      "**Do** set times, durations and counts in Barlow Semi Condensed with tabular figures, right-aligned in columns.",
+      "**Do** show status by form as well as colour, and give failure a struck-through form plus a warning icon.",
+      "**Do** separate listings with 1px hairlines and keep slots at a 3px radius.",
+      "**Do** use vendored Lucide SVGs from `static/icons/` for every icon, at 18px to 24px.",
+      "**Do** keep every clickable target at least 44px and every text size at least 14px.",
+      "**Do** put every string in both `static/i18n/en.json` and `ms.json`."
+    ],
+    "donts": [
+      "**Don't** use On Air red for decoration, emphasis or brand. It means live or failed.",
+      "**Don't** add a sidebar meeting list beside a white canvas, or SaaS stat cards. The schedule is the only meeting list.",
+      "**Don't** use monospace for UI text, numbers or labels. It is for commands, paths and code only.",
+      "**Don't** put eyebrow labels above headings, gradient text, or thick coloured side borders on callouts. The warning is an amber fill with a full outline.",
+      "**Don't** use emoji or Unicode glyphs as icons.",
+      "**Don't** shadow resting surfaces. Shadows belong only to menus, dialogs and the drawer.",
+      "**Don't** load fonts, icons or scripts from a CDN."
+    ]
+  }
+}

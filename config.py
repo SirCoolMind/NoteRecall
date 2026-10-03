@@ -11,6 +11,8 @@ DEFAULTS = {
     "gemini_model": "gemini-2.5-flash",
     "device": "auto",           # "auto" = NVIDIA GPU if available else CPU; "cpu" = force CPU
     "whisper_model": "large-v3",  # large-v3 | medium | small | base
+    "default_language": "",     # upload default: "" = Auto, "ms" or "en"
+    "default_speakers": 0,      # upload default: 0 = Auto, otherwise the speaker count
 }
 
 

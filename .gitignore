@@ -1,7 +1,7 @@
 # ---- secrets -------------------------------------------------------------
 # Holds the Gemini API key in plain text. NEVER commit this.
 # Copy config.example.json -> config.json and fill it in locally.
-config.json
+/config.json
 config.json.bak
 config.json.tmp
 
@@ -49,3 +49,8 @@ meta.json.tmp
 Thumbs.db
 Desktop.ini
 .DS_Store
+
+# Impeccable live-mode runtime state (keep only the project config)
+.impeccable/live/*
+!.impeccable/live/config.json
+.impeccable/config.local.json

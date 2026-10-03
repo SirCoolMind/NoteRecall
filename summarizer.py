@@ -132,3 +132,47 @@ def summarize(segments: list[dict], speaker_names: dict) -> tuple[str, str]:
         except Exception as e:
             print(f"[summarizer] ollama failed: {e}", flush=True)
     return _extractive(segments, speaker_names), "extractive"
+
+
+# ---- quick summary for the schedule rows ------------------------------------------------------
+
+_OVERVIEW_HEAD = re.compile(r"ringkasan|overview|summary", re.I)
+
+
+def _plain(line: str) -> str:
+    """One markdown line -> plain text: no heading marks, bullets, emphasis, code ticks or link targets."""
+    line = re.sub(r"^\s*(?:#{1,6}\s+|>\s*|[-*+]\s+|\d+[.)]\s+)", "", line)
+    line = re.sub(r"\[([^\]]*)\]\([^)]*\)", r"\1", line)
+    line = re.sub(r"[*_`]+", "", line)
+    return re.sub(r"\s+", " ", line).strip()
+
+
+def quick_summary(md: str, limit: int = 280) -> str:
+    """A one-paragraph gist of a summary.md: the overview paragraph if there is one, else the first
+    plain text, else the first key points joined. Empty string when there is nothing to show."""
+    try:
+        sections: list[tuple[str, list[tuple[str, str]]]] = [("", [])]   # (heading, [(kind, text)])
+        for raw in str(md or "").splitlines():
+            s = raw.strip()
+            if not s:
+                continue
+            if s.startswith("#"):
+                sections.append((_plain(s), []))
+                continue
+            kind = "bullet" if re.match(r"[-*+]\s+|\d+[.)]\s+", s) else "quote" if s.startswith(">") else "text"
+            text = _plain(s)
+            if text and text != "-":
+                sections[-1][1].append((kind, text))
+
+        def texts(kind, only=None):
+            return [t for h, items in sections if only is None or only(h) for k, t in items if k == kind]
+
+        found = texts("text", lambda h: bool(_OVERVIEW_HEAD.search(h))) or texts("text") \
+            or [t for t in texts("bullet")[:3]]
+        out = " ".join(found) if found and texts("text") else "; ".join(found)
+        out = re.sub(r"\s+", " ", out).strip()
+        if len(out) > limit:
+            out = out[: limit - 1].rstrip(" ,;:.") + "…"
+        return out
+    except Exception:
+        return ""

@@ -10,6 +10,7 @@ uvicorn
 python-multipart
 requests
 numpy
+imageio-ffmpeg   # bundled ffmpeg binary: no manual install needed
 
 # --- local engine (Whisper on this machine).
 # Not strictly needed if you only use the Google Gemini cloud engine, but the

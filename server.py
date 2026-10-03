@@ -10,15 +10,19 @@ import shutil
 import threading
 import time
 import uuid
+from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path
 
 import uvicorn
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 import config
 import engines
+import ffmpeg_tools
+import installer as installer_mod
 import pipeline
 import summarizer
 
@@ -26,7 +30,7 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
-app = FastAPI(title="Meeting Transcriber")
+app = FastAPI(title="NoteRecall")
 jobs: "queue.Queue[str]" = queue.Queue()
 live_status: dict[str, dict] = {}  # id -> {stage, progress}
 
@@ -51,7 +55,35 @@ def read_meta(mid: str) -> dict:
             time.sleep(0.05)
 
 
+_meta_locks: dict[str, threading.RLock] = {}
+_meta_locks_guard = threading.Lock()
+USER_FIELDS = ("title", "speaker_names")  # editable by the user at any time
+
+
+def meta_lock(mid: str) -> threading.RLock:
+    """Per-meeting lock: serialises every read-modify-write of meta.json."""
+    with _meta_locks_guard:
+        return _meta_locks.setdefault(mid, threading.RLock())
+
+
 def write_meta(mid: str, meta: dict):
+    with meta_lock(mid):
+        _write_meta_unlocked(mid, meta)
+
+
+def merge_user_fields(mid: str, meta: dict, skip=()):
+    """Pull user-editable fields from disk into the worker's stale copy.
+    Caller must hold meta_lock(mid)."""
+    try:
+        disk = read_meta(mid)
+    except Exception:
+        return
+    for k in USER_FIELDS:
+        if k in disk and k not in skip:
+            meta[k] = disk[k]
+
+
+def _write_meta_unlocked(mid: str, meta: dict):
     # atomic: write to temp file then replace, so readers never see a partial file
     p = DATA_DIR / mid / "meta.json"
     tmp = p.with_suffix(".json.tmp")
@@ -97,7 +129,9 @@ def worker():
             meta["status"], meta["progress"] = stage, progress
             live_status[mid] = {"stage": stage, "progress": progress}
             if changed:  # progress callbacks fire very often; only hit disk on change
-                write_meta(mid, meta)
+                with meta_lock(mid):
+                    merge_user_fields(mid, meta)
+                    _write_meta_unlocked(mid, meta)
 
         try:
             t0 = time.time()
@@ -106,7 +140,12 @@ def worker():
                 result = pipeline.rediarize_job(
                     d / meta["audio_file"], d, segments, arg or None, status)
                 meta["num_speakers"] = arg or 0
-                meta["speaker_names"] = {}
+                # re-detecting speakers intentionally resets the names; persist
+                # the reset now so later merges pick up the empty dict from disk
+                with meta_lock(mid):
+                    merge_user_fields(mid, meta, skip=("speaker_names",))
+                    meta["speaker_names"] = {}
+                    _write_meta_unlocked(mid, meta)
             else:
                 result = pipeline.run_job(
                     d / meta["audio_file"], d,
@@ -129,6 +168,8 @@ def worker():
                 num_speakers_found=n_speakers or result["num_speakers"],
                 processing_seconds=round(time.time() - t0),
             )
+            with meta_lock(mid):
+                merge_user_fields(mid, meta)
             summary, engine = summarizer.summarize(
                 result["segments"], meta.get("speaker_names", {}))
             (d / "summary.md").write_text(summary, encoding="utf-8")
@@ -145,7 +186,8 @@ def worker():
             jobs.task_done()
 
 
-threading.Thread(target=worker, daemon=True).start()
+_worker_started = False
+_worker_start_lock = threading.Lock()
 
 
 def requeue_unfinished():
@@ -163,24 +205,48 @@ def requeue_unfinished():
             jobs.put(("full", m["id"], None))
 
 
-requeue_unfinished()
+def start_background():
+    """Start the worker thread (once) and re-queue interrupted jobs.
+    Runs at app startup, not at import, so tests can point DATA_DIR elsewhere."""
+    global _worker_started
+    with _worker_start_lock:
+        if _worker_started:
+            return
+        _worker_started = True
+        DATA_DIR.mkdir(exist_ok=True)
+        threading.Thread(target=worker, daemon=True).start()
+        requeue_unfinished()
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    start_background()
+    yield
+
+
+app.router.lifespan_context = lifespan
 
 
 # ---------------------------------------------------------------- api
 
-@app.get("/", response_class=HTMLResponse)
+# Vendored CSS, JS, fonts, icons and i18n dictionaries (no CDN, works offline).
+app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+
+
+@app.get("/",response_class=HTMLResponse)
 def index():
     return (BASE_DIR / "static" / "index.html").read_text(encoding="utf-8")
 
 
-@app.get("/about", response_class=HTMLResponse)
+# The old standalone pages now live inside the Settings drawer of the app shell.
+@app.get("/about")
 def about():
-    return (BASE_DIR / "static" / "about.html").read_text(encoding="utf-8")
+    return RedirectResponse("/#settings/about")
 
 
-@app.get("/setup", response_class=HTMLResponse)
+@app.get("/setup")
 def setup_page():
-    return (BASE_DIR / "static" / "setup.html").read_text(encoding="utf-8")
+    return RedirectResponse("/#settings")
 
 
 @app.get("/api/status")
@@ -195,12 +261,19 @@ def api_status():
     }
 
 
+def _is_masked_key(value: str) -> bool:
+    """The browser only ever sees a masked key; a value that still looks masked
+    (or is the "set" placeholder) is that echo coming back, never a real key."""
+    return "…" in value or "•" in value or value.strip().lower() == "set"
+
+
 @app.get("/api/config")
 def get_config():
     cfg = config.load()
-    key = cfg.get("gemini_api_key", "")
-    cfg["gemini_api_key_masked"] = (key[:4] + "…" + key[-4:]) if len(key) > 8 else ("set" if key else "")
-    cfg.pop("gemini_api_key")
+    key = cfg.pop("gemini_api_key", "") or ""
+    # Never send the key itself back: only whether one exists and its last 4 characters.
+    cfg["has_key"] = bool(key)
+    cfg["gemini_api_key_masked"] = ("…" + key[-4:]) if len(key) > 8 else ("set" if key else "")
     return cfg
 
 
@@ -215,9 +288,18 @@ def set_config(body: dict):
         allowed["device"] = body["device"]
     if body.get("whisper_model") in ("large-v3", "medium", "small", "base"):
         allowed["whisper_model"] = body["whisper_model"]
-    # only overwrite the stored key if a new one was actually typed
-    if isinstance(body.get("gemini_api_key"), str) and body["gemini_api_key"].strip():
-        allowed["gemini_api_key"] = body["gemini_api_key"].strip()
+    if body.get("default_language") in ("", "ms", "en"):
+        allowed["default_language"] = body["default_language"]
+    n = body.get("default_speakers")
+    if isinstance(n, str) and n.strip().isdigit():
+        n = int(n.strip())
+    if isinstance(n, int) and not isinstance(n, bool) and 0 <= n <= 8:
+        allowed["default_speakers"] = n
+    # only overwrite the stored key if a new one was actually typed (not the masked echo)
+    if isinstance(body.get("gemini_api_key"), str):
+        typed = body["gemini_api_key"].strip()
+        if typed and not _is_masked_key(typed):
+            allowed["gemini_api_key"] = typed
     config.save(allowed)
     return get_config()
 
@@ -269,11 +351,13 @@ def _fixes(cfg: dict) -> dict:
             "linux": [{"do": "Install the web-server packages", "cmd": f"{LNX_PIP} install -r requirements.txt"}],
         },
         "ffmpeg": {
-            "windows": [{"do": "Install ffmpeg (reads and converts the audio)",
+            "windows": [{"do": "Install the bundled ffmpeg", "cmd": f"{WIN_PIP} install imageio-ffmpeg"},
+                        {"do": "ffmpeg is bundled via requirements.txt (imageio-ffmpeg); a manual install is optional",
                          "cmd": "winget install -e --id Gyan.FFmpeg"},
-                        {"do": "Close and reopen your terminal, then check it is on PATH",
+                        {"do": "Optional: after a manual install, reopen your terminal and check it is on PATH",
                          "cmd": "ffmpeg -version"}],
-            "linux": [{"do": "Install ffmpeg — Debian/Ubuntu", "cmd": "sudo apt install -y ffmpeg"},
+            "linux": [{"do": "Install the bundled ffmpeg", "cmd": f"{LNX_PIP} install imageio-ffmpeg"},
+                      {"do": "Bundled via requirements.txt; manual install is optional — Debian/Ubuntu", "cmd": "sudo apt install -y ffmpeg"},
                       {"do": "Fedora/RHEL", "cmd": "sudo dnf install -y ffmpeg"},
                       {"do": "Arch", "cmd": "sudo pacman -S ffmpeg"},
                       {"do": "Verify", "cmd": "ffmpeg -version"}],
@@ -349,11 +433,10 @@ def _fixes(cfg: dict) -> dict:
     }
 
 
-@app.get("/api/setup")
-def setup_check():
+def _evaluate(cfg: dict) -> dict:
+    """Run every setup check. Also what the installer re-runs after each step."""
     import platform
     import shutil as sh
-    cfg = config.load()
     checks = []
     fixes = _fixes(cfg)
     osname = "windows" if os.name == "nt" else "linux"
@@ -362,8 +445,9 @@ def setup_check():
         # req: "always" = needed for any engine; "local" = only for the local
         # engine (+ the Re-detect speakers button); "optional" = nice to have
         # fix: BOTH OSes — the page lets you switch tabs to see either
+        # auto: the installer can fix it unattended (see installer.py); otherwise manual steps only
         checks.append({"id": cid, "name": name, "ok": bool(ok), "detail": detail,
-                       "hint": hint, "req": req,
+                       "hint": hint, "req": req, "auto": cid in installer_mod.STEP_IDS,
                        "fix": fixes.get(cid, {"windows": [], "linux": []})})
 
     pv = platform.python_version()
@@ -371,8 +455,10 @@ def setup_check():
     add("core", "Web server packages", True,
         f"fastapi {__import__('fastapi').__version__}")
 
-    ff = sh.which(pipeline.FFMPEG) or (pipeline.FFMPEG if Path(pipeline.FFMPEG).exists() else None)
-    add("ffmpeg", "ffmpeg (audio converter)", ff, ff or "not found — required for every engine")
+    ff = ffmpeg_tools.resolve_ffmpeg()
+    add("ffmpeg", "ffmpeg (audio converter)", ff.path,
+        f"{ff.source}: {ff.path}" if ff.path else
+        "not found — required for every engine (pip install -r requirements.txt bundles it)")
 
     free_gb = sh.disk_usage(str(DATA_DIR)).free / 1e9
     add("disk", "Disk space", free_gb > 5, f"{free_gb:.0f} GB free",
@@ -413,17 +499,7 @@ def setup_check():
                 "Local engine will use CPU — pick a smaller Whisper model above", req="optional")
 
     wm = cfg.get("whisper_model", "large-v3")
-    # honour HF_HOME / HF_HUB_CACHE — a systemd service usually sets one, and
-    # hardcoding ~/.cache would report "not downloaded" for a model that is
-    # sitting right there
-    try:
-        from huggingface_hub.constants import HF_HUB_CACHE
-        hub = Path(HF_HUB_CACHE)
-    except Exception:
-        hub = Path(os.environ.get("HF_HUB_CACHE")
-                   or os.environ.get("HUGGINGFACE_HUB_CACHE")
-                   or Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface")) / "hub")
-    whisper_cache = hub / f"models--Systran--faster-whisper-{wm}"
+    whisper_cache = installer_mod.whisper_cache_dir(wm)
     add("whisper_model", f"Whisper model '{wm}'", whisper_cache.exists(),
         str(whisper_cache) if whisper_cache.exists() else "not downloaded yet",
         "" if whisper_cache.exists() else "Downloads automatically on first local transcription",
@@ -444,11 +520,51 @@ def setup_check():
     add("gemini_key", "Google Gemini API key", bool(cfg.get("gemini_api_key")),
         "configured" if cfg.get("gemini_api_key") else "not set", req="gemini")
 
+    cuda = next(c for c in checks if c["id"] == "cuda")
     return {
         "checks": checks,
         "engine": cfg["engine"],
         "os": osname,
         "os_detail": f"{platform.system()} {platform.release()}",
+        "compute": "gpu" if cuda["ok"] and cfg.get("device") != "cpu" else "cpu",
+    }
+
+
+# One-click setup. The installer re-runs the checks after each step, so it is
+# built around _evaluate; tests swap this for an Installer with fake steps.
+setup_installer = installer_mod.Installer(
+    steps=installer_mod.default_steps(),
+    evaluate=lambda: _evaluate(config.load()),
+)
+
+
+@app.get("/api/setup/install")
+def setup_install_state():
+    """Cheap per-item install state, for polling: {running, order, items:{id:{state,message,progress}}}.
+    state is pending | running | done | failed. The same object is embedded in GET /api/setup."""
+    return setup_installer.snapshot()
+
+
+@app.post("/api/setup/install")
+def setup_install(body: dict = None):
+    """Start the unattended install steps in ONE background thread.
+    Body: {"ids": [...]} to pick items; omitted = every missing item the current engine needs.
+    A request while a run is active is merged into it (started=false, merged=true)."""
+    ids = (body or {}).get("ids")
+    if ids is not None and not (isinstance(ids, list) and all(isinstance(i, str) for i in ids)):
+        raise HTTPException(400, "ids must be a list of check ids")
+    try:
+        return setup_installer.start(ids)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@app.get("/api/setup")
+def setup_check():
+    cfg = config.load()
+    out = _evaluate(cfg)
+    out.update({
+        "install": setup_installer.snapshot(),
         "python_exe": _py(""),
         "architecture": {
             "local": [
@@ -484,7 +600,8 @@ def setup_check():
                 "Cloud engine timing is reconstructed locally, not reported by Gemini (whose timestamps proved unusable). Measured median error is ~2s and worst ~7s, so a line may highlight a moment early or late. The local Whisper engine's timestamps come straight from the model and are exact.",
             ],
         },
-    }
+    })
+    return out
 
 
 @app.post("/api/meetings")
@@ -512,6 +629,14 @@ async def upload(file: UploadFile = File(...), title: str = Form(""),
     return {"id": mid}
 
 
+def _quick_summary(d: Path) -> str:
+    """The gist shown on a schedule row; empty when there is no (readable) summary.md."""
+    try:
+        return summarizer.quick_summary((d / "summary.md").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+
+
 @app.get("/api/meetings")
 def list_meetings():
     out = []
@@ -521,6 +646,7 @@ def list_meetings():
             live = live_status.get(m["id"])
             if live:
                 m.update(status=live["stage"], progress=live["progress"])
+            m["quick_summary"] = _quick_summary(d)
             out.append(m)
     return out
 
@@ -547,13 +673,14 @@ def get_audio(mid: str):
 
 @app.patch("/api/meetings/{mid}")
 def patch_meeting(mid: str, body: dict):
-    meta = read_meta(mid)
-    if "title" in body:
-        meta["title"] = str(body["title"]).strip() or meta["title"]
-    if "speaker_names" in body:
-        meta.setdefault("speaker_names", {}).update(
-            {str(k): str(v).strip() for k, v in body["speaker_names"].items() if str(v).strip()})
-    write_meta(mid, meta)
+    with meta_lock(mid):
+        meta = read_meta(mid)
+        if "title" in body:
+            meta["title"] = str(body["title"]).strip() or meta["title"]
+        if "speaker_names" in body:
+            meta.setdefault("speaker_names", {}).update(
+                {str(k): str(v).strip() for k, v in body["speaker_names"].items() if str(v).strip()})
+        _write_meta_unlocked(mid, meta)
     return meta
 
 
@@ -561,10 +688,11 @@ def patch_meeting(mid: str, body: dict):
 def retranscribe(mid: str):
     """Re-run the whole pipeline on the stored audio, using the engine that is
     configured now (e.g. after switching local <-> cloud)."""
-    meta = read_meta(mid)
-    meta["engine"] = config.load()["engine"]
-    meta["status"], meta["progress"] = "queued", 0
-    write_meta(mid, meta)
+    with meta_lock(mid):
+        meta = read_meta(mid)
+        meta["engine"] = config.load()["engine"]
+        meta["status"], meta["progress"] = "queued", 0
+        _write_meta_unlocked(mid, meta)
     jobs.put(("full", mid, None))
     return {"ok": True, "engine": meta["engine"]}
 
@@ -572,11 +700,12 @@ def retranscribe(mid: str):
 @app.post("/api/meetings/{mid}/rediarize")
 def rediarize(mid: str, num_speakers: int = 0):
     """Re-run speaker detection only (keeps the transcript text)."""
-    meta = read_meta(mid)
     if not read_transcript(mid):
         raise HTTPException(400, "no transcript yet")
-    meta["status"], meta["progress"] = "queued", 0
-    write_meta(mid, meta)
+    with meta_lock(mid):
+        meta = read_meta(mid)
+        meta["status"], meta["progress"] = "queued", 0
+        _write_meta_unlocked(mid, meta)
     jobs.put(("rediarize", mid, num_speakers if num_speakers > 0 else None))
     return {"ok": True}
 
@@ -589,8 +718,10 @@ def resummarize(mid: str):
         raise HTTPException(400, "no transcript yet")
     summary, engine = summarizer.summarize(segments, meta.get("speaker_names", {}))
     (DATA_DIR / mid / "summary.md").write_text(summary, encoding="utf-8")
-    meta["summary_engine"] = engine
-    write_meta(mid, meta)
+    with meta_lock(mid):
+        meta = read_meta(mid)  # re-read: names may have changed during the summary
+        meta["summary_engine"] = engine
+        _write_meta_unlocked(mid, meta)
     return {"summary": summary, "engine": engine}
 
 
@@ -645,5 +776,5 @@ if __name__ == "__main__":
     # HOST=0.0.0.0 to expose it on a LAN / Linux server
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8756"))
-    print(f"Meeting Transcriber -> http://{host}:{port}")
+    print(f"NoteRecall -> http://{host}:{port}")
     uvicorn.run(app, host=host, port=port, log_level="warning")
