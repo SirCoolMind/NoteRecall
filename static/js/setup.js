@@ -37,6 +37,7 @@ export function registerSetup(Alpine) {
         this.engine = s.engine;
         this.os = s.os === "windows" ? "windows" : "linux";
         this.compute = s.compute;
+        this.appDir = s.app_dir || "";
         this.noteInstall(s.install);
         this.loaded = true;
         this.error = false;
@@ -159,6 +160,11 @@ export function registerSetup(Alpine) {
       if (it.state === "failed") return it.message;
       if (it.state === "running") return it.message || "";
       return "";
+    },
+    // The command that moves a terminal into the NoteRecall folder (cd /d also switches drive on Windows).
+    cdCmd() {
+      if (!this.appDir) return "";
+      return this.os === "windows" ? `cd /d "${this.appDir}"` : `cd "${this.appDir}"`;
     },
     stepText(r, i, step) {
       const key = `setup.fix.${this.os}.${r.id}.${i}`;

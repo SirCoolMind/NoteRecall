@@ -238,7 +238,6 @@
   "setup.retry.aria": "Retry {name}",
   "setup.steps.show": "Manual steps",
   "setup.steps.title": "Steps for {os}",
-  "setup.steps.where": "Run these in a terminal, from the NoteRecall folder.",
   "setup.steps.none": "No manual steps are listed for this item.",
   "setup.os.windows": "Windows",
   "setup.os.linux": "Linux",
@@ -356,5 +355,10 @@
   "row.quick.none": "Not available yet",
   "dur.unit.h": "h",
   "dur.unit.m": "m",
-  "dur.unit.s": "s"
+  "dur.unit.s": "s",
+  "setup.steps.where.windows": "Open Command Prompt (press the Windows key, type cmd, press Enter), then paste this first so the commands below run inside the NoteRecall folder:",
+  "setup.steps.where.linux": "Open a Terminal, then paste this first so the commands below run inside the NoteRecall folder:",
+  "setup.copy.cd": "Copy the command that opens the NoteRecall folder",
+  "set.about.project": "Project page",
+  "set.about.project_text": "Source code, updates and issue reports:"
 }

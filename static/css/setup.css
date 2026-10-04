@@ -63,6 +63,7 @@
 .srow__steps { margin-top: var(--sp-2); padding: var(--sp-4); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-slot); }
 .srow__os { margin: 0 0 var(--sp-2); font: 700 var(--fs-body)/var(--lh-tight) var(--font-slot); }
 .srow__where, .srow__none { margin: 0 0 var(--sp-3); color: var(--ink-2); font-size: var(--fs-small); }
+.srow__where p { margin: 0 0 var(--sp-2); }
 .steps { margin: 0; padding-left: var(--sp-5); }
 .step { margin-bottom: var(--sp-4); padding-left: var(--sp-1); }
 .step:last-child { margin-bottom: 0; }

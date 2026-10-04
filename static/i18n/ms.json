@@ -238,7 +238,6 @@
   "setup.retry.aria": "Cuba lagi: {name}",
   "setup.steps.show": "Langkah manual",
   "setup.steps.title": "Langkah untuk {os}",
-  "setup.steps.where": "Jalankan di terminal, dari dalam folder NoteRecall.",
   "setup.steps.none": "Tiada langkah manual disenaraikan untuk item ini.",
   "setup.os.windows": "Windows",
   "setup.os.linux": "Linux",
@@ -356,5 +355,10 @@
   "row.quick.none": "Belum tersedia",
   "dur.unit.h": "j",
   "dur.unit.m": "m",
-  "dur.unit.s": "s"
+  "dur.unit.s": "s",
+  "setup.steps.where.windows": "Buka Command Prompt (tekan kekunci Windows, taip cmd, tekan Enter), kemudian tampal ini dahulu supaya arahan di bawah dijalankan dalam folder NoteRecall:",
+  "setup.steps.where.linux": "Buka Terminal, kemudian tampal ini dahulu supaya arahan di bawah dijalankan dalam folder NoteRecall:",
+  "setup.copy.cd": "Salin arahan untuk membuka folder NoteRecall",
+  "set.about.project": "Laman projek",
+  "set.about.project_text": "Kod sumber, kemas kini dan laporan masalah:"
 }

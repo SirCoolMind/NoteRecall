@@ -1,44 +1,80 @@
-# Hosting on a Linux server with nginx
+# Hosting NoteRecall on a Linux server (nginx)
 
-Runs the app as a systemd service on `127.0.0.1:8756`, with nginx in front for
-**authentication**, TLS, and large uploads.
+This guide puts NoteRecall on an always-on Linux server so several people can
+open it through a web address, protected by a password.
 
-Verified on Ubuntu 24.04 (nginx 1.24) with a real upload through the proxy.
+What you end up with:
 
-> **Read this first.** The app has **no login of its own**. Anyone who reaches
-> it can read every transcript, download the audio, replace your Gemini API key
-> and delete meetings. nginx is what keeps it private — do not skip the
-> `auth_basic` section, and never bind the app itself to `0.0.0.0` on a network
-> you don't control.
+| Piece | Where it lives |
+|---|---|
+| The app | `/opt/noterecall` |
+| Meetings (audio, transcripts) | `/opt/noterecall/data` |
+| Background service file | `/etc/systemd/system/noterecall.service` |
+| Web server (nginx) site file | `/etc/nginx/sites-available/noterecall` (+ a link in `/etc/nginx/sites-enabled/`) |
+| Password file | `/etc/nginx/.htpasswd` |
+| Logs | `journalctl -u noterecall` (app), `/var/log/nginx/noterecall.*.log` (nginx) |
+
+Verified on Ubuntu 24.04 with nginx 1.24. Other Debian-based systems work the
+same way.
+
+> ⚠️ **Read this first.** NoteRecall has **no login of its own**. Anyone who
+> reaches it can read every transcript, download the audio, replace your
+> Gemini API key and delete meetings. nginx's password (step 6) is what keeps
+> it private — do not skip it, and never start the app with `HOST=0.0.0.0` on
+> a network you don't control.
+
+**How to use this guide:** connect to your server (for example `ssh you@server`)
+and paste each grey box into the terminal, **one box at a time**. Words in
+`CAPITALS` like `YOUR_DOMAIN` are placeholders — the box right before them
+tells you how to set them.
 
 ---
 
-## 1. System packages
+## 0. Set your two placeholders
+
+Your web address (or the server's IP address if you have no domain), and the
+name you'll log in with. Change the values between the quotes, then paste:
+
+```bash
+YOUR_DOMAIN="meetings.example.com"
+YOUR_LOGIN="admin"
+```
+
+These only last for this terminal session. If you reconnect, paste this box
+again before continuing.
+
+## 1. Install the system packages
 
 ```bash
 sudo apt update
-sudo apt install -y python3-venv ffmpeg nginx apache2-utils
+sudo apt install -y git curl python3-venv nginx apache2-utils
 ```
 
-`python3-venv` is separate from `python3` on Debian/Ubuntu — without it
-`python3 -m venv` fails with *"ensurepip is not available"*.
-`apache2-utils` provides `htpasswd`.
+(`python3-venv` lets Python create the app's environment; `apache2-utils`
+provides the `htpasswd` password tool.)
 
-## 2. Install the app
+## 2. Download the app into `/opt/noterecall`
 
 ```bash
-sudo mkdir -p /opt/meeting-transcriber
-sudo chown $USER: /opt/meeting-transcriber
-# copy the project in (git clone / rsync / scp), then:
-cd /opt/meeting-transcriber
-python3 -m venv .venv
-./.venv/bin/pip install -r requirements.txt        # CPU-ready, ~487 MB
+sudo git clone https://github.com/SirCoolMind/NoteRecall.git /opt/noterecall
+sudo chown -R "$USER": /opt/noterecall
+cd /opt/noterecall
+```
 
-# only if `nvidia-smi` shows a card — this pulls ~2.3 GB of CUDA libraries
+Create its Python environment and install the packages (~500 MB):
+
+```bash
+python3 -m venv .venv
+./.venv/bin/pip install -r requirements.txt
+```
+
+**Only if the server has an NVIDIA graphics card** (this adds ~2.3 GB):
+
+```bash
 nvidia-smi && ./.venv/bin/pip install -r requirements-gpu.txt
 ```
 
-Speaker models (~165 MB), once:
+Download the speaker-detection models (~165 MB) into `/opt/noterecall/models`:
 
 ```bash
 mkdir -p models
@@ -50,192 +86,269 @@ curl -L -o models/seg.tar.bz2 \
 tar -xjf models/seg.tar.bz2 -C models && rm models/seg.tar.bz2
 ```
 
-Whisper `large-v3` (~3 GB) downloads itself on the first transcription. To
-fetch it up front:
+Download the Whisper speech model (~3 GB) into
+`/opt/noterecall/.cache/huggingface` so the service can find it:
 
 ```bash
-./.venv/bin/python -c "from huggingface_hub import snapshot_download; \
-  snapshot_download('Systran/faster-whisper-large-v3')"
+HF_HOME=/opt/noterecall/.cache/huggingface ./.venv/bin/python -c \
+  "from huggingface_hub import snapshot_download; snapshot_download('Systran/faster-whisper-large-v3')"
 ```
 
-**Use `large-v3` even without a GPU** — ~24 min per hour of audio on 8 CPU
-threads. Smaller models silently translate Malay-English speech instead of
-transcribing it (see [summary.md §5](summary.md)).
+**Use `large-v3` even without a graphics card** — about 24 minutes per hour of
+audio on 8 CPU threads. Smaller models silently translate Malay-English speech
+instead of transcribing it (see [summary.md §5](summary.md)).
 
-## 3. Service user
+## 3. Create a user for the service
+
+The app runs as its own locked-down user called `noterecall`, which owns the
+app folder:
 
 ```bash
-sudo useradd --system --home /opt/meeting-transcriber --shell /usr/sbin/nologin meetings
-sudo chown -R meetings: /opt/meeting-transcriber
+sudo useradd --system --home /opt/noterecall --shell /usr/sbin/nologin noterecall
+sudo chown -R noterecall: /opt/noterecall
 ```
 
-## 4. systemd unit
+## 4. Create the service file — `/etc/systemd/system/noterecall.service`
 
-`/etc/systemd/system/meeting-transcriber.service`:
+This makes NoteRecall start automatically with the server and restart if it
+crashes. Paste the whole box; it writes the file for you:
 
-```ini
+```bash
+sudo tee /etc/systemd/system/noterecall.service > /dev/null <<'EOF'
 [Unit]
 Description=NoteRecall
 After=network.target
 
 [Service]
 Type=simple
-User=meetings
-Group=meetings
-WorkingDirectory=/opt/meeting-transcriber
+User=noterecall
+Group=noterecall
+WorkingDirectory=/opt/noterecall
 
-# Bind to localhost ONLY. nginx is the only thing that should reach it.
+# Listen on this machine ONLY. nginx is the only thing that should reach it.
 Environment=HOST=127.0.0.1
 Environment=PORT=8756
-# Give the service user a writable model cache (the Setup page honours this).
-Environment=HF_HOME=/opt/meeting-transcriber/.cache/huggingface
+# Where the Whisper model was downloaded in step 2.
+Environment=HF_HOME=/opt/noterecall/.cache/huggingface
 
-ExecStart=/opt/meeting-transcriber/.venv/bin/python server.py
+ExecStart=/opt/noterecall/.venv/bin/python server.py
 Restart=on-failure
 RestartSec=5
 
-# Transcription pegs 8 cores for minutes at a time; be a good neighbour.
+# Transcription keeps 8 cores busy for minutes at a time; be a good neighbour.
 Nice=10
 
-# Basic hardening — it only ever needs its own directory.
+# Basic hardening: it only ever needs its own folder.
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=full
 ProtectHome=true
-ReadWritePaths=/opt/meeting-transcriber
+ReadWritePaths=/opt/noterecall
 
 [Install]
 WantedBy=multi-user.target
+EOF
 ```
+
+Start it, and make it start on every boot:
 
 ```bash
 sudo systemctl daemon-reload
-sudo systemctl enable --now meeting-transcriber
-systemctl status meeting-transcriber
-curl -s localhost:8756/api/status        # sanity check
+sudo systemctl enable --now noterecall
 ```
 
-Logs: `journalctl -u meeting-transcriber -f`
-
-## 5. Password file
+Check it is running — you should see `active (running)` (press `q` to leave):
 
 ```bash
-sudo htpasswd -c /etc/nginx/.htpasswd hafiz     # add more users: drop the -c
-sudo chown root:www-data /etc/nginx/.htpasswd
-sudo chmod 640 /etc/nginx/.htpasswd
+systemctl status noterecall
 ```
 
-## 6. nginx
+And that it answers (prints a short JSON line):
 
-`/etc/nginx/sites-available/meeting-transcriber`:
+```bash
+curl -s http://127.0.0.1:8756/api/status
+```
 
-```nginx
+To watch its log live: `journalctl -u noterecall -f` (Ctrl + C to stop
+watching).
+
+## 5. Create the nginx site file — `/etc/nginx/sites-available/noterecall`
+
+nginx is the front door: it asks for the password, accepts big uploads, and
+passes everything to NoteRecall. This box writes the file and fills in your
+domain from step 0:
+
+```bash
+sudo tee /etc/nginx/sites-available/noterecall > /dev/null <<EOF
 server {
     listen 80;
-    server_name meetings.example.com;   # or the server's IP
+    server_name ${YOUR_DOMAIN};
 
-    # Recordings are big. nginx defaults to 1 MB, which fails EVERY upload
-    # with 413. A 2-hour m4a is ~100 MB; leave headroom.
+    # Recordings are big. nginx's default is 1 MB, which fails EVERY upload
+    # with "413". A 2-hour m4a is ~100 MB; leave headroom.
     client_max_body_size 2g;
     client_body_timeout  600s;
 
-    # The app has no login of its own. This is the only thing protecting it.
+    # NoteRecall has no login of its own. This is the only thing protecting it.
     auth_basic           "NoteRecall";
     auth_basic_user_file /etc/nginx/.htpasswd;
 
-    access_log /var/log/nginx/meetings.access.log;
-    error_log  /var/log/nginx/meetings.error.log;
+    access_log /var/log/nginx/noterecall.access.log;
+    error_log  /var/log/nginx/noterecall.error.log;
 
     location / {
         proxy_pass http://127.0.0.1:8756;
-        proxy_http_version 1.1;                 # required for the two off's below
+        proxy_http_version 1.1;
 
-        proxy_set_header Host              $host;
-        proxy_set_header X-Real-IP         $remote_addr;
-        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host              \$host;
+        proxy_set_header X-Real-IP         \$remote_addr;
+        proxy_set_header X-Forwarded-For   \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
 
-        # Stream the upload straight through instead of spooling the whole
-        # recording to disk first.
+        # Stream uploads straight through instead of saving them to disk first.
         proxy_request_buffering off;
-        # The audio player seeks with HTTP Range and the server answers 206;
-        # don't let nginx buffer that.
+        # The audio player jumps around using HTTP Range requests; don't buffer.
         proxy_buffering off;
 
         proxy_read_timeout 600s;
         proxy_send_timeout 600s;
     }
 }
+EOF
 ```
 
+Check the file has your domain in it (look at the `server_name` line):
+
 ```bash
-sudo ln -s /etc/nginx/sites-available/meeting-transcriber /etc/nginx/sites-enabled/
+grep server_name /etc/nginx/sites-available/noterecall
+```
+
+Turn the site on (this creates the link
+`/etc/nginx/sites-enabled/noterecall`) and turn off nginx's default welcome
+page:
+
+```bash
+sudo ln -sf /etc/nginx/sites-available/noterecall /etc/nginx/sites-enabled/noterecall
 sudo rm -f /etc/nginx/sites-enabled/default
+```
+
+## 6. Set the password — `/etc/nginx/.htpasswd`
+
+This asks you to type a password twice (nothing shows while you type — that's
+normal):
+
+```bash
+sudo htpasswd -c /etc/nginx/.htpasswd "$YOUR_LOGIN"
+sudo chown root:www-data /etc/nginx/.htpasswd
+sudo chmod 640 /etc/nginx/.htpasswd
+```
+
+To add **another** person later, run this (note: **no** `-c`, which would wipe
+the existing users), replacing `OTHER_NAME`:
+
+```bash
+sudo htpasswd /etc/nginx/.htpasswd OTHER_NAME
+```
+
+Now check nginx's settings and load them. It must say `syntax is ok` and
+`test is successful`:
+
+```bash
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-## 7. TLS
+Open `http://YOUR_DOMAIN` in a browser: it should ask for the login, then show
+NoteRecall.
 
-Basic auth sends the password in clear text over HTTP — put TLS in front of it
-if the server is reachable beyond a trusted LAN:
+## 7. HTTPS (strongly recommended)
+
+Without HTTPS the password travels unencrypted. If you have a real domain name
+pointing at this server, this gets a free certificate and updates the nginx
+file for you:
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d meetings.example.com
+sudo certbot --nginx -d "$YOUR_DOMAIN"
 ```
 
-certbot edits the same server block and adds the redirect. Re-check
-`client_max_body_size` survived.
+Afterwards, confirm the upload limit survived certbot's edit (should print
+`client_max_body_size 2g;`):
+
+```bash
+grep client_max_body_size /etc/nginx/sites-available/noterecall
+```
 
 ## 8. Firewall
 
+Allow web traffic, and keep NoteRecall's own port (8756) closed — nginx reaches
+it from inside the machine:
+
 ```bash
+sudo ufw allow OpenSSH
 sudo ufw allow 'Nginx Full'
 sudo ufw enable
 ```
 
-Port 8756 must **not** be open — nginx reaches it over loopback.
+(`OpenSSH` is allowed first so you don't lock yourself out of the server.)
 
 ---
 
-## Verifying it works
+## Check that everything works
+
+Replace `YOUR_PASSWORD` with the password from step 6.
+
+Without a password you must be refused — this must print `401`. If it prints
+`200`, the password is **not** active; recheck step 5–6:
 
 ```bash
-# 401 without credentials — if this returns 200, auth is not applied
-curl -s -o /dev/null -w '%{http_code}\n' http://meetings.example.com/
-
-# 200 with them
-curl -s -u hafiz:PASS -o /dev/null -w '%{http_code}\n' http://meetings.example.com/
-
-# uploads over 1 MB pass (413 here means client_max_body_size is wrong)
-curl -s -u hafiz:PASS -X POST http://meetings.example.com/api/meetings \
-  -F "file=@meeting.m4a" -F "title=Test" -F "num_speakers=0"
-
-# audio seeking works (must be 206, not 200)
-curl -s -u hafiz:PASS -o /dev/null -w '%{http_code}\n' \
-  -H 'Range: bytes=0-99' http://meetings.example.com/api/meetings/<id>/audio
+curl -s -o /dev/null -w '%{http_code}\n' "http://$YOUR_DOMAIN/"
 ```
+
+With the password it must print `200`:
+
+```bash
+curl -s -u "$YOUR_LOGIN:YOUR_PASSWORD" -o /dev/null -w '%{http_code}\n' "http://$YOUR_DOMAIN/"
+```
+
+(After step 7, use `https://` instead of `http://`.)
+
+---
+
+## Updating to a newer version
+
+```bash
+cd /opt/noterecall
+sudo -u noterecall git pull
+sudo -u noterecall ./.venv/bin/pip install -r requirements.txt
+sudo systemctl restart noterecall
+```
+
+Meetings in `/opt/noterecall/data` and settings in
+`/opt/noterecall/config.json` are kept.
 
 ## Troubleshooting
 
-| symptom | cause |
+| What you see | Cause and fix |
 |---|---|
-| **413 Request Entity Too Large** | `client_max_body_size` too small (default 1 MB) |
-| **504 during a big upload** | raise `proxy_read_timeout` / `client_body_timeout` |
-| Player won't seek; restarts from 0 | Range being swallowed — check `proxy_buffering off` and that no cache sits in front |
-| Setup says the Whisper model is missing, but it's downloaded | `HF_HOME` differs between the shell you downloaded with and the service user |
-| Job stuck at "queued" | one worker, one job at a time — check `journalctl -u meeting-transcriber` |
-| **Anyone can open it** | `auth_basic` missing, or the app is bound to `0.0.0.0` and reachable directly on 8756 |
-| Permission denied writing `data/` | `chown -R meetings: /opt/meeting-transcriber` |
+| **413 Request Entity Too Large** when uploading | `client_max_body_size` is missing or too small in `/etc/nginx/sites-available/noterecall`. Fix it, then `sudo nginx -t && sudo systemctl reload nginx`. |
+| **502 Bad Gateway** | The app isn't running. `systemctl status noterecall` and `journalctl -u noterecall -n 50` show why. |
+| **504** during a big upload | Raise `proxy_read_timeout` and `client_body_timeout` in the nginx site file. |
+| The player won't jump; always restarts from 0 | Check `proxy_buffering off;` is in the nginx site file, and no other cache sits in front. |
+| Setup says the Whisper model is missing, but you downloaded it | It was downloaded somewhere other than `/opt/noterecall/.cache/huggingface`. Repeat the Whisper download in step 2, then `sudo chown -R noterecall: /opt/noterecall`. |
+| A meeting stays "Queued" | One meeting is processed at a time; it's waiting its turn. `journalctl -u noterecall -f` shows progress. |
+| **Anyone can open it without a password** | `auth_basic` lines missing from the nginx site file, or the app was started with `HOST=0.0.0.0`. |
+| `Permission denied` writing `data/` | `sudo chown -R noterecall: /opt/noterecall` |
 
-## Operating notes
+## Good to know
 
-- **Disk grows with every meeting** — the original audio is kept in
-  `data/<id>/`. Budget roughly 1 GB per 10 hours of recording plus ~3.5 GB of
-  models. Delete meetings from the UI to reclaim space.
-- **One job at a time.** A 2-hour meeting occupies the worker for ~45 min on
-  CPU; anything uploaded meanwhile waits.
-- **Restarts are safe.** Jobs interrupted by a restart are re-queued
-  automatically on startup.
-- **Cloud engine on a server:** `config.json` holds the Gemini key in plain
-  text — `chmod 600` it, and remember audio then leaves your server for Google.
+- **Disk use grows with every meeting** — the original audio is kept in
+  `/opt/noterecall/data/<id>/`. Budget about 1 GB per 10 hours of recording,
+  plus ~3.5 GB for the models. Deleting a meeting in the app frees its space.
+- **One meeting at a time.** A 2-hour meeting keeps the server busy for ~45
+  minutes on CPU; anything uploaded meanwhile waits in the queue.
+- **Restarts are safe.** Meetings interrupted by a restart are queued again
+  automatically.
+- **Cloud engine on a server:** `/opt/noterecall/config.json` holds the Gemini
+  key in plain text. Lock it down with
+  `sudo chmod 600 /opt/noterecall/config.json`, and remember audio then leaves
+  your server for Google.

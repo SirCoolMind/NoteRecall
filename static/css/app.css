@@ -389,6 +389,7 @@
 .prose { margin: 0 0 var(--sp-3); max-width: var(--measure); }
 .prose--list { padding-left: var(--sp-5); }
 .prose--list li { margin-bottom: var(--sp-2); }
+.prose .link { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; overflow-wrap: anywhere; }
 .prose__h { margin: var(--sp-5) 0 var(--sp-2); font: 700 var(--fs-body)/var(--lh-tight) var(--font-slot); }
 
 /* ---- narrower than the 1024px design target: stay usable, never scroll sideways ---- */

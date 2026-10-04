@@ -28,16 +28,15 @@ A cloud engine (Google Gemini) is available as an opt-in alternative.
 
 | | |
 |---|---|
-| **Linux/macOS** | `./start.sh` — creates the venv, installs `requirements.txt`, adds CUDA only if `nvidia-smi` finds a card, downloads the speaker models, starts the server |
-| **Windows** | `start.bat` — **runs the app only**; it assumes `.venv` already exists. For a fresh Windows machine, follow the per-step instructions on `/setup` |
+| **Linux/macOS** | `bash start.sh` — installs uv if missing, creates the venv, installs `requirements.txt`, adds CUDA only if `nvidia-smi` finds a card, downloads the speaker models, starts the server |
+| **Windows** | `start.bat` — same steps as `start.sh`: installs uv, creates the venv, installs requirements (CUDA only with an NVIDIA card), downloads the speaker models, starts the server and opens the browser |
 
 Then open <http://localhost:8756>:
 
 | page | what |
 |---|---|
 | `/` | the app — upload, meeting list, transcript viewer |
-| `/setup` | requirements check with per-OS install steps, engine + device settings |
-| `/about` | what the project is, the pipeline, the tech stack |
+| `/#settings` | Settings window (tabs: General, Transcription, Speakers, Summary, Setup, About); `/setup` and `/about` redirect into it |
 
 Serve it on a LAN box with `HOST=0.0.0.0 PORT=8756 ./start.sh`.
 For a real server behind nginx (systemd unit, upload limits, **authentication**),

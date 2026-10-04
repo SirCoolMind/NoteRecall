@@ -566,6 +566,7 @@ def setup_check():
     out.update({
         "install": setup_installer.snapshot(),
         "python_exe": _py(""),
+        "app_dir": str(BASE_DIR.resolve()),
         "architecture": {
             "local": [
                 {"stage": "1 · Audio preparation", "tech": "ffmpeg",

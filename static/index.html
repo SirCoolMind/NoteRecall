@@ -119,7 +119,15 @@
                 <div class="srow__steps" :id="'steps-home-' + r.id" x-show="s.expanded['home:' + r.id]" x-cloak>
                   <h3 class="srow__os" x-text="$t('setup.steps.title', { os: $t('setup.os.' + s.os) })"></h3>
                   <p class="srow__none" x-show="!r.steps.length" x-text="$t('setup.steps.none')"></p>
-                  <p class="srow__where" x-show="r.steps.some((st) => st.cmd)" x-text="$t('setup.steps.where')"></p>
+                  <div class="srow__where" x-show="r.steps.some((st) => st.cmd)">
+                    <p x-text="$t('setup.steps.where.' + s.os)"></p>
+                    <div class="step__cmd" x-show="s.cdCmd()">
+                      <code class="step__code" x-text="s.cdCmd()"></code>
+                      <button type="button" class="btn step__copy" :aria-label="$t('setup.copy.cd')" @click="s.copy(r.id, 'cd', s.cdCmd())">
+                        <span x-text="s.copied === r.id + ':cd' ? $t('setup.copied') : $t('setup.copy')"></span>
+                      </button>
+                    </div>
+                  </div>
                   <ol class="steps">
                     <template x-for="(st, i) in r.steps" :key="i">
                       <li class="step">
@@ -995,7 +1003,15 @@
                 <div class="srow__steps" :id="'steps-drawer-' + r.id" x-show="s.expanded['drawer:' + r.id]" x-cloak>
                   <h4 class="srow__os" x-text="$t('setup.steps.title', { os: $t('setup.os.' + s.os) })"></h4>
                   <p class="srow__none" x-show="!r.steps.length" x-text="$t('setup.steps.none')"></p>
-                  <p class="srow__where" x-show="r.steps.some((st) => st.cmd)" x-text="$t('setup.steps.where')"></p>
+                  <div class="srow__where" x-show="r.steps.some((st) => st.cmd)">
+                    <p x-text="$t('setup.steps.where.' + s.os)"></p>
+                    <div class="step__cmd" x-show="s.cdCmd()">
+                      <code class="step__code" x-text="s.cdCmd()"></code>
+                      <button type="button" class="btn step__copy" :aria-label="$t('setup.copy.cd')" @click="s.copy(r.id, 'cd', s.cdCmd())">
+                        <span x-text="s.copied === r.id + ':cd' ? $t('setup.copied') : $t('setup.copy')"></span>
+                      </button>
+                    </div>
+                  </div>
                   <ol class="steps">
                     <template x-for="(st, i) in r.steps" :key="i">
                       <li class="step">
@@ -1041,6 +1057,10 @@
 
         <h4 class="prose__h" x-text="$t('set.about.data')"></h4>
         <p class="prose" x-text="$t('set.about.data_text')"></p>
+
+        <h4 class="prose__h" x-text="$t('set.about.project')"></h4>
+        <p class="prose"><span x-text="$t('set.about.project_text')"></span>
+          <a class="link" href="https://github.com/SirCoolMind/NoteRecall" target="_blank" rel="noopener noreferrer">github.com/SirCoolMind/NoteRecall</a></p>
       </section>
       </div>
     </div>
