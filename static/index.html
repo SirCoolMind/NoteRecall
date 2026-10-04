@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="/static/css/app.css">
   <link rel="stylesheet" href="/static/css/meeting.css">
   <link rel="stylesheet" href="/static/css/setup.css">
+  <link rel="stylesheet" href="/static/css/updates.css">
   <script src="/static/js/boot.js"></script>
   <!-- Document order matters: app.js registers on alpine:init, then Alpine starts. -->
   <script type="module" src="/static/js/app.js"></script>
@@ -28,6 +29,10 @@
         </div>
 
         <div class="masthead__tools">
+          <a class="upd-chip" href="#settings/updates" x-show="$store.update.available" x-cloak
+             :aria-label="$t('upd.chip.aria', { version: $store.update.latest })" :title="$t('upd.chip.aria', { version: $store.update.latest })">
+            <span x-icon="'download'"></span><span class="upd-chip__text" x-text="$t('upd.chip')"></span>
+          </a>
           <div class="seg" role="group" :aria-label="$t('lang.group')">
             <button type="button" class="seg__btn" lang="ms"
                     :aria-pressed="$store.i18n.lang === 'ms'" :aria-label="$t('lang.ms')" :title="$t('lang.ms')"
@@ -1033,12 +1038,114 @@
       </section>
       </div>
 
+      <div class="tpanel" role="tabpanel" id="panel-updates" aria-labelledby="tab-updates" tabindex="0" x-show="tab === 'updates'" x-cloak>
+      <!-- Updates -->
+      <section class="dset" id="set-updates" aria-labelledby="h-updates" x-data="{ u: $store.update }">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-updates" x-text="$t('upd.title')"></h3>
+        </div>
+
+        <dl class="facts">
+          <div class="facts__row"><dt x-text="$t('upd.current')"></dt><dd class="tabular" x-text="u.version || '...'"></dd></div>
+          <div class="facts__row"><dt x-text="$t('upd.type')"></dt><dd class="upd__type" x-text="u.typeText"></dd></div>
+        </dl>
+        <p class="dhint" x-text="$t('upd.keep')"></p>
+
+        <p class="dnote upd__done" x-show="u.justUpdated && !u.busy" x-cloak role="status">
+          <span x-icon="'check'"></span><span x-text="$t('upd.done', { version: u.justUpdated })"></span>
+        </p>
+
+        <!-- check -->
+        <div class="upd__check" x-show="!u.working && u.phase !== 'failed' && u.phase !== 'timeout'">
+          <button type="button" class="btn" :disabled="u.phase === 'checking'" :aria-busy="u.phase === 'checking'" @click="u.check({ force: true })">
+            <span x-icon="u.phase === 'checking' ? 'loader' : 'refresh-cw'" :class="{ 'is-spinning': u.phase === 'checking' }"></span>
+            <span x-text="u.phase === 'checking' ? $t('upd.checking') : $t('upd.check')"></span>
+          </button>
+          <span class="upd__when tabular" x-show="u.checkedAt && !u.offline" x-text="$t('upd.checked', { time: u.checkedAt })"></span>
+        </div>
+
+        <p class="dnote upd__offline" x-show="u.offline && !u.working" x-cloak role="alert">
+          <span x-icon="'alert-triangle'"></span><span x-text="$t('upd.offline')"></span>
+        </p>
+
+        <p class="upd__ok" x-show="u.upToDate && !u.working && u.phase !== 'failed' && u.phase !== 'timeout'" x-cloak role="status">
+          <span x-icon="'check'"></span>
+          <span><strong x-text="$t('upd.uptodate')"></strong>
+            <span class="upd__ok-sub" x-text="$t('upd.uptodate.detail', { version: u.version })"></span></span>
+        </p>
+
+        <!-- an update is available -->
+        <div class="upd__avail" x-show="u.available && !u.working && u.phase !== 'failed' && u.phase !== 'timeout'" x-cloak>
+          <div class="upd__head">
+            <div class="upd__headtext">
+              <h4 class="upd__name" x-text="$t('upd.available', { version: u.latest })"></h4>
+              <p class="upd__from" x-text="$t('upd.from', { current: u.version, latest: u.latest })"></p>
+            </div>
+            <div class="upd__act">
+              <button type="button" class="plate-btn" :disabled="!u.canUpdate || u.phase === 'checking'" @click="u.apply()">
+                <span x-text="$t('upd.apply')"></span>
+              </button>
+            </div>
+          </div>
+          <p class="dnote upd__reason" x-show="!u.canUpdate && u.reasonText" role="note">
+            <span x-icon="'alert-triangle'"></span><span x-text="u.reasonText"></span>
+          </p>
+          <p class="dnote upd__reason" x-show="u.applyError" x-cloak role="alert">
+            <span x-icon="'alert-triangle'"></span><span x-text="u.applyError"></span>
+          </p>
+          <h5 class="upd__notes-h" x-text="$t('upd.notes')"></h5>
+          <p class="upd__notes" x-show="u.result && u.result.notes" x-text="u.result && u.result.notes"></p>
+          <p class="dhint" x-show="!(u.result && u.result.notes)" x-text="$t('upd.notes.none')"></p>
+          <p class="dhint"><a class="dlink" :href="u.result && u.result.url" target="_blank" rel="noopener noreferrer" x-text="$t('upd.notes.link')"></a></p>
+        </div>
+
+        <!-- applying: the same row pattern as the setup list -->
+        <div class="upd__run" x-show="u.working || u.phase === 'failed' || u.phase === 'timeout'" x-cloak>
+          <h4 class="upd__name" x-text="$t('upd.applying', { version: u.target || u.latest })"></h4>
+          <ul class="setup__list setup__list--drawer">
+            <template x-for="st in u.steps" :key="st.id">
+              <li class="srow" :class="'srow--' + st.state">
+                <div class="srow__main">
+                  <div class="srow__text"><span class="srow__name" x-text="$t('upd.step.' + st.id)"></span></div>
+                  <div class="srow__state">
+                    <span class="pill" :class="'pill--' + u.stepPill(st.state)">
+                      <span x-icon="st.state === 'done' ? 'check' : 'alert-triangle'" x-show="st.state === 'done' || st.state === 'failed'"></span>
+                      <span x-text="$t('upd.state.' + st.state)"></span>
+                    </span>
+                  </div>
+                </div>
+                <p class="srow__error" x-show="st.state === 'failed' && st.message">
+                  <span x-icon="'alert-triangle'"></span><span x-text="st.message"></span>
+                </p>
+              </li>
+            </template>
+          </ul>
+          <p class="upd__restart" x-show="u.phase === 'restarting'" x-cloak>
+            <span x-icon="'loader'" class="is-spinning"></span>
+            <span><strong x-text="$t('upd.restarting')"></strong> <span x-text="$t('upd.restarting.hint')"></span></span>
+          </p>
+          <div class="dnote upd__manual" x-show="u.phase === 'timeout'" x-cloak role="alert">
+            <span x-icon="'alert-triangle'"></span>
+            <div>
+              <strong x-text="$t('upd.timeout')"></strong>
+              <p class="upd__p" x-text="$t('upd.timeout.how')"></p>
+            </div>
+          </div>
+          <p class="dnote upd__reason" x-show="u.phase === 'failed'" x-cloak role="alert">
+            <span x-icon="'alert-triangle'"></span><span x-text="$t('upd.failed')"></span>
+          </p>
+        </div>
+        <p class="sr-only" role="status" aria-live="polite" x-text="u.announcement"></p>
+      </section>
+      </div>
+
       <div class="tpanel" role="tabpanel" id="panel-about" aria-labelledby="tab-about" tabindex="0" x-show="tab === 'about'" x-cloak>
       <!-- About -->
       <section class="dset dset--about" id="set-about" aria-labelledby="h-about">
         <div class="dset__head">
           <h3 class="dset__title" id="h-about" x-text="$t('set.about.title')"></h3>
         </div>
+        <p class="prose"><strong x-text="$t('upd.version', { version: $store.update.version || '...' })"></strong></p>
         <p class="prose" x-text="$t('set.about.intro')"></p>
 
         <h4 class="prose__h" x-text="$t('set.about.how')"></h4>

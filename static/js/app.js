@@ -7,6 +7,7 @@ import { registerHome } from "./home.js";
 import { registerMeeting } from "./meeting.js";
 import { registerSettings } from "./settings.js";
 import { registerSetup } from "./setup.js";
+import { registerUpdates } from "./updates.js";
 
 document.addEventListener("alpine:init", () => {
   const Alpine = window.Alpine;
@@ -42,6 +43,7 @@ document.addEventListener("alpine:init", () => {
   window.addEventListener("hashchange", () => { Alpine.store("route").id = routeFromHash(); });
 
   registerSetup(Alpine);
+  registerUpdates(Alpine);
   registerHome(Alpine);
   registerMeeting(Alpine);
   registerSettings(Alpine);
@@ -50,7 +52,7 @@ document.addEventListener("alpine:init", () => {
   // The old /setup and /about pages redirect here, and the older section names still work (checks -> Setup).
   // Closing the modal puts the route that was showing before it back.
   const SETTINGS_HASH = /^#settings(?:\/([\w-]+))?$/;
-  const TAB_IDS = ["general", "transcription", "speakers", "summary", "setup", "about"];
+  const TAB_IDS = ["general", "transcription", "speakers", "summary", "setup", "updates", "about"];
   const TAB_ALIASES = { checks: "setup", engine: "transcription", device: "transcription", defaults: "general", interface: "general" };
   const TAB_KEY = "noterecall.settings.tab";
 
@@ -123,6 +125,7 @@ document.addEventListener("alpine:init", () => {
     selectTab(id, { focus = false } = {}) {
       const next = normaliseTab(id) || "general";
       this.tab = next;
+      window.dispatchEvent(new CustomEvent("settings-tab", { detail: { tab: next } }));
       try { sessionStorage.setItem(TAB_KEY, next); } catch (e) { /* storage blocked: the tab is just not remembered */ }
       if (this.modalOpen && location.hash !== "#settings/" + next) {
         history.replaceState(null, "", location.pathname + location.search + "#settings/" + next);

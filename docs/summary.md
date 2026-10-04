@@ -240,11 +240,15 @@ fastest setting and the one that keeps the machine usable during a job.
 | File | Role |
 |---|---|
 | `server.py` | FastAPI app, job queue, meeting CRUD, setup checks, exports |
+| `updater.py` | In-app updates: newest `vX.Y.Z` tag from GitHub, git / ZIP install types, safe apply that never touches `data/`, `models/`, `config.json`, then restart (exit code 75) |
+| `version.py`, `VERSION` | The app version (`0.1.0`), read from `VERSION` |
+| `CHANGELOG.md` | What changed in each release, in plain language |
 | `pipeline.py` | Local pipeline: convert → Whisper → diarize → merge; model loading, device selection |
 | `engines.py` | Cloud pipeline: chunking, Gemini calls, VAD timing layout, tolerant parsing |
 | `summarizer.py` | Ollama or extractive summaries (Malay/English aware) |
 | `config.py` | `config.json` load/save (engine, key, device, model) |
 | `static/index.html` | The app UI (meeting list, transcript detail) |
+| `static/js/updates.js` | Updates store: version, daily quiet check, masthead indicator, Settings → Updates tab |
 | `static/js/settings.js`, `static/js/setup.js` | Settings drawer: engine, defaults, setup checks, one-click install, about (`/setup` and `/about` redirect here) |
 | `requirements.txt` | Core + local engine, CPU-ready (487 MB installed) |
 | `requirements-gpu.txt` | CUDA libraries (~2.3 GB) — NVIDIA GPUs only |
@@ -259,6 +263,7 @@ fastest setting and the one that keeps the machine usable during a job.
 | endpoint | purpose |
 |---|---|
 | `GET /`, `/setup`, `/about` | the three pages |
+| `GET /api/version`, `GET /api/update/check`, `POST /api/update/apply`, `GET /api/update/status` | version and install type, update check (cached 6 h), start and follow an in-app update |
 | `GET/POST /api/config`, `POST /api/config/test-gemini` | settings, key test |
 | `GET /api/status`, `GET /api/setup` | badges; requirements + architecture |
 | `POST /api/meetings` | upload (multipart: file, title, language, num_speakers) |

@@ -1,0 +1,57 @@
+/* Updates: the masthead indicator and the Settings -> Updates tab. Tokens only; see tokens.css.
+   Quiet by design: a small chip on the navy masthead, never a modal. The tab reuses the setup rows. */
+
+/* ---- masthead indicator: outlined chip, icon only on narrow screens ---- */
+.upd-chip {
+  min-height: var(--target); padding: 0 var(--sp-3); box-sizing: border-box;
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  border: 1px solid var(--on-masthead-2); border-radius: var(--r-control);
+  color: var(--on-masthead); text-decoration: none; white-space: nowrap;
+  font: 600 var(--fs-small)/1 var(--font-slot); letter-spacing: 0.02em;
+  transition: background-color var(--t-fast) var(--ease-out);
+}
+.upd-chip:hover { background: color-mix(in srgb, var(--on-masthead) 16%, transparent); }
+.upd-chip .icon { width: 20px; height: 20px; color: var(--focus); }
+@media (max-width: 720px) {
+  .upd-chip { width: var(--target); padding: 0; justify-content: center; }
+  .upd-chip__text { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
+/* ---- the tab ---- */
+.facts dd.upd__type { font-weight: 500; }
+.upd__avail, .upd__run, .upd__ok { margin-top: var(--sp-4); }
+.upd__check { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-4); margin: var(--sp-4) 0; }
+.upd__when { color: var(--ink-2); font-size: var(--fs-small); }
+.is-spinning { animation: spin 900ms linear infinite; }
+
+.upd__ok {
+  display: flex; align-items: flex-start; gap: var(--sp-3); margin: 0; padding: var(--sp-4);
+  background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-slot);
+}
+.upd__ok .icon { width: 22px; height: 22px; margin-top: 1px; flex: none; }
+.upd__ok-sub { display: block; color: var(--ink-2); font-size: var(--fs-small); }
+.upd__done .icon { color: var(--ink); }
+.upd__offline { color: var(--on-air); }
+
+.upd__avail { padding: var(--sp-4); background: var(--sheet); border: 2px solid var(--action); border-radius: var(--r-slot); }
+.upd__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3) var(--sp-5); }
+.upd__headtext { flex: 1 1 16rem; min-width: 0; }
+.upd__name { margin: 0; font: 700 var(--fs-heading)/var(--lh-tight) var(--font-slot); text-wrap: balance; }
+.upd__from { margin: var(--sp-1) 0 0; color: var(--ink-2); font-size: var(--fs-small); }
+.upd__act { flex: none; }
+.upd__act .plate-btn { background: var(--action); color: var(--on-action); }
+.upd__act .plate-btn:hover:not(:disabled) { background: var(--action-hover); opacity: 1; }
+.upd__act .plate-btn:focus-visible { box-shadow: 0 0 0 2px var(--sheet), 0 0 0 5px var(--ink); }
+.upd__act .plate-btn:disabled { background: var(--paper); color: var(--ink-2); border: 1px solid var(--rule-strong); cursor: not-allowed; }
+.upd__reason { margin: var(--sp-4) 0 0; }
+.upd__notes-h { margin: var(--sp-5) 0 var(--sp-2); font: 700 var(--fs-body)/var(--lh-tight) var(--font-slot); }
+.upd__notes {
+  margin: 0 0 var(--sp-3); max-width: var(--measure); white-space: pre-wrap; overflow-wrap: anywhere;   /* plain text, line breaks kept */
+  padding: var(--sp-3) var(--sp-4); background: var(--paper); border: 1px solid var(--rule); border-radius: var(--r-slot);
+}
+
+.upd__run .upd__name { margin-bottom: var(--sp-3); }
+.upd__restart { display: flex; align-items: flex-start; gap: var(--sp-3); margin: var(--sp-4) 0 0; max-width: var(--measure); }
+.upd__restart .icon { width: 22px; height: 22px; margin-top: 1px; flex: none; }
+.upd__manual { margin-top: var(--sp-4); max-width: var(--measure); }
+.upd__p { margin: var(--sp-1) 0 0; font-weight: 400; }

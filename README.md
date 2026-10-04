@@ -11,6 +11,8 @@ mixed together** (bahasa rojak).
 
 Project page: <https://github.com/SirCoolMind/NoteRecall>
 
+Current version: **0.1.0** — see what changed in the [changelog](CHANGELOG.md). Your version is also shown in the app under **Settings (gear icon) → About**.
+
 ---
 
 ## Contents
@@ -46,24 +48,14 @@ installs what it needs on its first start.
 
 Pick **one** of the two ways below. If you are not sure, use **Way A**.
 
-### Way A — Download as a ZIP file (easiest, no extra tools)
+Both ways can **update from inside the app** later (see
+[step 6](#6-update-to-a-newer-version)). Git is faster and more reliable, so we
+recommend it; the ZIP needs nothing extra to download.
 
-1. Open <https://github.com/SirCoolMind/NoteRecall> in your browser.
-2. Click the green **`<> Code`** button, then **Download ZIP**.
-3. Find the file `NoteRecall-main.zip` (usually in your **Downloads** folder).
-4. Unzip it:
-   - **Windows:** right-click the ZIP → **Extract All…** → **Extract**.
-   - **macOS:** double-click the ZIP.
-   - **Linux:** right-click → **Extract Here**.
-5. You now have a folder called **`NoteRecall-main`**. Move it somewhere you
-   will remember, for example your **Documents** folder.
+### Way A — Download with Git (recommended)
 
-> **Windows tip:** don't put it inside a OneDrive-synced folder. OneDrive tries
-> to upload the large model files and can slow everything down.
-
-### Way B — Download with Git (makes updating easier later)
-
-Use this if you already have Git, or you want one-command updates.
+Git is a free tool that downloads the project and keeps it up to date. You only
+paste a few lines.
 
 **Windows** — open **Command Prompt** (press the Windows key, type `cmd`, press
 Enter) and paste these lines one at a time:
@@ -110,6 +102,21 @@ git clone https://github.com/SirCoolMind/NoteRecall.git
 
 You now have a folder called **`NoteRecall`** inside your Documents folder.
 
+### Way B — Download as a ZIP
+
+No extra tools needed. If you install Git later, the first in-app update
+connects the folder to GitHub by itself, so later updates are quick.
+
+1. Open <https://github.com/SirCoolMind/NoteRecall> in your browser.
+2. Click the green **`<> Code`** button, then **Download ZIP**.
+3. Find the file `NoteRecall-main.zip` (usually in your **Downloads** folder).
+4. Unzip it:
+   - **Windows:** right-click the ZIP → **Extract All…** → **Extract**.
+   - **macOS:** double-click the ZIP.
+   - **Linux:** right-click → **Extract Here**.
+5. You now have a folder called **`NoteRecall-main`**. Move it somewhere you
+   will remember, for example your **Documents** folder.
+
 ---
 
 ## 3. Start it
@@ -120,7 +127,7 @@ seconds.
 
 ### Windows
 
-1. Open the NoteRecall folder (`NoteRecall-main` or `NoteRecall`).
+1. Open the NoteRecall folder (`NoteRecall` for Way A, `NoteRecall-main` for Way B).
 2. Double-click **`start.bat`**.
 3. If a blue **"Windows protected your PC"** box appears, click **More info**
    → **Run anyway**. (This appears because the file was downloaded from the
@@ -136,17 +143,17 @@ Open **Terminal** and paste these two lines (change the folder name if yours
 is different):
 
 ```bash
-cd ~/Documents/NoteRecall-main
+cd ~/Documents/NoteRecall
 ```
 
 ```bash
 bash start.sh
 ```
 
-If you used Way B (Git), the folder is `~/Documents/NoteRecall` instead:
+If you used Way B (ZIP), the folder is `~/Documents/NoteRecall-main` instead:
 
 ```bash
-cd ~/Documents/NoteRecall
+cd ~/Documents/NoteRecall-main
 ```
 
 When it is ready, your browser opens NoteRecall at <http://127.0.0.1:8756>.
@@ -199,20 +206,35 @@ speaker labels, so it is quick.
 
 ## 6. Update to a newer version
 
+NoteRecall can update itself. Your meetings, settings and downloaded models are
+kept. Works the same for both ways of downloading.
+
+1. Click the **gear icon** (top right) to open **Settings**, then the
+   **Updates** tab.
+2. Click **Check for updates**. It says either **You're up to date** or which
+   version is available, with a short list of what's new.
+3. Click **Update now**. It shows each step, then **restarts itself** and the
+   page reloads in the new version. This takes a minute or two.
+
+NoteRecall also checks quietly about once a day. When a new version is out, a
+small **Update available** note appears at the top of the screen; click it to
+open the Updates tab. The version you have is shown under
+**Settings → About** and at the top of the Updates tab.
+
+The update waits if a recording is still being processed. If you have changed
+NoteRecall's own files on this computer, it tells you so instead of
+overwriting them.
+
+If the page doesn't come back after a few minutes, close the NoteRecall window
+and start it again with `start.bat` (Windows) or `bash start.sh` (macOS /
+Linux).
+
+### Updating by hand (if the in-app update doesn't work)
+
 Your meetings live in the **`data`** folder and your settings in
-**`config.json`**, both inside the NoteRecall folder. Updating keeps them as
-long as you follow these steps.
+**`config.json`**, both inside the NoteRecall folder.
 
-**If you used Way A (ZIP):**
-
-1. Stop NoteRecall (close its window).
-2. Download the new ZIP and unzip it, as in [step 2](#way-a--download-as-a-zip-file-easiest-no-extra-tools).
-3. From your **old** NoteRecall folder, copy the **`data`** folder, the
-   **`models`** folder and the **`config.json`** file into the **new** folder.
-4. Start NoteRecall from the new folder. When everything looks right, delete
-   the old folder.
-
-**If you used Way B (Git):** stop NoteRecall, then in Command Prompt /
+**If you used Way A (Git):** stop NoteRecall, then in Command Prompt /
 Terminal:
 
 Windows:
@@ -235,6 +257,15 @@ git pull
 
 Start NoteRecall again as usual. Your `data` folder and `config.json` are not
 touched by `git pull`.
+
+**If you used Way B (ZIP):**
+
+1. Stop NoteRecall (close its window).
+2. Download the new ZIP and unzip it, as in [step 2](#way-b--download-as-a-zip).
+3. From your **old** NoteRecall folder, copy the **`data`** folder, the
+   **`models`** folder and the **`config.json`** file into the **new** folder.
+4. Start NoteRecall from the new folder. When everything looks right, delete
+   the old folder.
 
 ---
 

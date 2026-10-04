@@ -25,6 +25,8 @@ import ffmpeg_tools
 import installer as installer_mod
 import pipeline
 import summarizer
+import updater as updater_mod
+from version import __version__
 
 BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
@@ -253,6 +255,7 @@ def setup_page():
 def api_status():
     cfg = config.load()
     return {
+        "version": __version__,
         "device": pipeline._whisper_device or "not loaded yet",
         "ollama_model": summarizer.ollama_model(),
         "queue_size": jobs.qsize(),
@@ -528,6 +531,42 @@ def _evaluate(cfg: dict) -> dict:
         "os_detail": f"{platform.system()} {platform.release()}",
         "compute": "gpu" if cuda["ok"] and cfg.get("device") != "cpu" else "cpu",
     }
+
+
+# ---------------------------------------------------------------- updates
+
+def _meeting_busy() -> bool:
+    return jobs.unfinished_tasks > 0 or bool(live_status)
+
+
+app_updater = updater_mod.Updater(BASE_DIR, busy=_meeting_busy)
+
+
+@app.get("/api/version")
+def api_version():
+    """{version, install_type: git | zip-git | zip, can_update, reason}; reason says why not, in plain words."""
+    return {**app_updater.version_info(), "version": __version__}
+
+
+@app.get("/api/update/check")
+def update_check(force: int = 0):
+    """{current, latest, available, notes, url, checked_at, error?}. Cached for 6 hours; ?force=1 asks GitHub again.
+    A network failure is an answer (error: "network"), never an HTTP error."""
+    return app_updater.check(force=bool(force))
+
+
+@app.post("/api/update/apply")
+def update_apply():
+    """Start the update in the background (409 with a reason when refused or already running)."""
+    try:
+        return app_updater.apply()
+    except updater_mod.Refused as e:
+        raise HTTPException(409, str(e))
+
+
+@app.get("/api/update/status")
+def update_status():
+    return app_updater.status()
 
 
 # One-click setup. The installer re-runs the checks after each step, so it is

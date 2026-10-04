@@ -34,42 +34,46 @@ else
   echo "[2/4] Environment .venv found."
 fi
 
-# 3. dependencies (skipped when requirements are unchanged) --------------
-HAS_GPU=0
-if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
-  HAS_GPU=1
-fi
-STAMP=.venv/.requirements.stamp
-NEW=.venv/.requirements.new
-cat requirements.txt > "$NEW"
-if [ "$HAS_GPU" = 1 ]; then cat requirements-gpu.txt >> "$NEW"; fi
-if [ -f "$STAMP" ] && cmp -s "$STAMP" "$NEW"; then
-  echo "[3/4] Dependencies up to date."
-  rm -f "$NEW"
-else
-  echo "[3/4] Installing dependencies..."
-  uv pip install --python "$PY" -r requirements.txt
-  if [ "$HAS_GPU" = 1 ]; then
-    echo "      NVIDIA GPU detected - adding CUDA libraries (~2.3 GB)..."
-    uv pip install --python "$PY" -r requirements-gpu.txt
-  else
-    echo "      No NVIDIA GPU - skipping CUDA libraries (CPU mode)."
+# 3. dependencies and speaker models. A function so a restart after an in-app
+#    update runs it again (stamp logic: nothing is installed when unchanged).
+install_deps() {
+  HAS_GPU=0
+  if command -v nvidia-smi >/dev/null 2>&1 && nvidia-smi >/dev/null 2>&1; then
+    HAS_GPU=1
   fi
-  mv "$NEW" "$STAMP"
-fi
+  STAMP=.venv/.requirements.stamp
+  NEW=.venv/.requirements.new
+  cat requirements.txt > "$NEW"
+  if [ "$HAS_GPU" = 1 ]; then cat requirements-gpu.txt >> "$NEW"; fi
+  if [ -f "$STAMP" ] && cmp -s "$STAMP" "$NEW"; then
+    echo "[3/4] Dependencies up to date."
+    rm -f "$NEW"
+  else
+    echo "[3/4] Installing dependencies..."
+    uv pip install --python "$PY" -r requirements.txt
+    if [ "$HAS_GPU" = 1 ]; then
+      echo "      NVIDIA GPU detected - adding CUDA libraries (~2.3 GB)..."
+      uv pip install --python "$PY" -r requirements-gpu.txt
+    else
+      echo "      No NVIDIA GPU - skipping CUDA libraries (CPU mode)."
+    fi
+    mv "$NEW" "$STAMP"
+  fi
 
-# Speaker-detection models (~165 MB), only fetched once.
-if [ ! -f models/nemo_en_titanet_large.onnx ]; then
-  echo "      Downloading speaker models..."
-  mkdir -p models
-  BASE=https://github.com/k2-fsa/sherpa-onnx/releases/download
-  curl -L -o models/nemo_en_titanet_large.onnx \
-    "$BASE/speaker-recongition-models/nemo_en_titanet_large.onnx"
-  curl -L -o models/seg.tar.bz2 \
-    "$BASE/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2"
-  tar -xjf models/seg.tar.bz2 -C models
-  rm -f models/seg.tar.bz2
-fi
+  # Speaker-detection models (~165 MB), only fetched once.
+  if [ ! -f models/nemo_en_titanet_large.onnx ]; then
+    echo "      Downloading speaker models..."
+    mkdir -p models
+    BASE=https://github.com/k2-fsa/sherpa-onnx/releases/download
+    curl -L -o models/nemo_en_titanet_large.onnx \
+      "$BASE/speaker-recongition-models/nemo_en_titanet_large.onnx"
+    curl -L -o models/seg.tar.bz2 \
+      "$BASE/speaker-segmentation-models/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2"
+    tar -xjf models/seg.tar.bz2 -C models
+    rm -f models/seg.tar.bz2
+  fi
+}
+install_deps
 
 # 4. start the server; open the browser once it responds -------------------
 open_browser() {
@@ -89,4 +93,13 @@ open_browser() {
 ) &
 
 echo "[4/4] Starting NoteRecall at $URL (Ctrl+C to stop)"
-exec "$PY" server.py
+# The server exits with code 75 after an in-app update: run the dependency step again
+# and start it again in this same terminal (no second browser tab). Any other code ends here.
+while true; do
+  code=0
+  "$PY" server.py || code=$?
+  if [ "$code" -ne 75 ]; then exit "$code"; fi
+  echo
+  echo "NoteRecall was updated and is restarting..."
+  install_deps
+done

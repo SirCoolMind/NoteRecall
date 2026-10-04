@@ -41,6 +41,7 @@ goto venv_done
 echo [2/4] Environment .venv found.
 :venv_done
 
+:deps
 REM 3. dependencies (skipped when requirements are unchanged)
 set "HAS_GPU=0"
 nvidia-smi >nul 2>&1
@@ -89,12 +90,23 @@ del "models\nemo_en_titanet_large.onnx" >nul 2>&1
 del "models\seg.tar.bz2" >nul 2>&1
 :models_done
 
-REM 4. start the server; open the browser once it responds
+REM 4. start the server; open the browser once it responds (only the first time:
+REM after an in-app update the server exits with code 75 and comes back in this same tab)
+if defined RESTARTED goto run_server
 start "" /min powershell -NoProfile -WindowStyle Hidden -Command "$u='%URL%/api/status'; for($i=0;$i -lt 300;$i++){ try{ Invoke-WebRequest $u -UseBasicParsing -TimeoutSec 2 | Out-Null; Start-Process '%URL%'; break }catch{ Start-Sleep 1 } }"
 echo [4/4] Starting NoteRecall at %URL% (close this window to stop)
+:run_server
 "%PY%" server.py
+set "RC=%errorlevel%"
+if "%RC%"=="75" goto restart
 pause
 exit /b 0
+
+:restart
+echo.
+echo NoteRecall was updated and is restarting...
+set "RESTARTED=1"
+goto deps
 
 :fail
 echo.

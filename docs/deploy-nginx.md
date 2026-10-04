@@ -316,6 +316,16 @@ curl -s -u "$YOUR_LOGIN:YOUR_PASSWORD" -o /dev/null -w '%{http_code}\n' "http://
 
 ## Updating to a newer version
 
+**In the app (easiest).** Open **Settings (gear) → Updates → Check for updates →
+Update now**. NoteRecall fetches the new release, installs any changed
+packages, then exits with code 75 so the service restarts itself (the unit's
+`Restart=on-failure` already treats that as a failure and restarts it). The
+update waits while a meeting is processing and refuses if tracked files were
+edited on the server. Everything must be writable by the `noterecall` user
+(`sudo chown -R noterecall: /opt/noterecall`).
+
+**On the command line.**
+
 ```bash
 cd /opt/noterecall
 sudo -u noterecall git pull
