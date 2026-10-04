@@ -96,17 +96,10 @@ if defined RESTARTED goto run_server
 start "" /min powershell -NoProfile -WindowStyle Hidden -Command "$u='%URL%/api/status'; for($i=0;$i -lt 300;$i++){ try{ Invoke-WebRequest $u -UseBasicParsing -TimeoutSec 2 | Out-Null; Start-Process '%URL%'; break }catch{ Start-Sleep 1 } }"
 echo [4/4] Starting NoteRecall at %URL% (close this window to stop)
 :run_server
-"%PY%" server.py
-set "RC=%errorlevel%"
-if "%RC%"=="75" goto restart
-pause
-exit /b 0
-
-:restart
-echo.
-echo NoteRecall was updated and is restarting...
-set "RESTARTED=1"
-goto deps
+REM Deliberately ONE line. An in-app update can rewrite this file while it runs, and cmd reads
+REM batch files from disk line by line, so nothing after this line may be read once the server
+REM has started. Exit code 75 = updated: run the NEW start.bat from the top (no second tab).
+"%PY%" server.py & if errorlevel 75 (if not errorlevel 76 (set "RESTARTED=1" & echo. & echo NoteRecall was updated and is restarting... & call "%~f0" & exit /b) else (pause & exit /b)) else (pause & exit /b)
 
 :fail
 echo.
