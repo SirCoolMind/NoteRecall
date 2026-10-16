@@ -7,3 +7,11 @@
 # cuDNN must stay below 10: CTranslate2 4.x links against cuDNN 8/9.
 nvidia-cublas-cu12
 nvidia-cudnn-cu12<10
+
+# GPU speaker detection: sherpa-onnx's CUDA build (replaces the CPU-only one
+# from requirements.txt) plus the extra CUDA libraries its onnxruntime needs.
+--find-links https://k2-fsa.github.io/sherpa/onnx/cuda.html
+sherpa-onnx==1.13.8+cuda12.cudnn9
+nvidia-cuda-runtime-cu12
+nvidia-cufft-cu12
+nvidia-curand-cu12

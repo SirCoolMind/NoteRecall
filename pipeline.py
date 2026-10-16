@@ -38,8 +38,14 @@ _whisper_device = None
 _whisper_key = None  # (model_name, device) the cache was loaded with
 
 
+# pip-installed CUDA libraries, in load order (a library's deps come first).
+# ctranslate2 (Whisper) needs cublas + cudnn; sherpa-onnx's CUDA build
+# (diarization) also needs the runtime, cufft (+ nvjitlink) and curand.
+_CUDA_LIBS = ("cuda_runtime", "cublas", "cudnn", "nvjitlink", "cufft", "curand")
+
+
 def _setup_cuda_dlls():
-    """Make the pip-installed cuBLAS/cuDNN libraries visible to ctranslate2.
+    """Make the pip-installed CUDA libraries visible to ctranslate2 / onnxruntime.
 
     Windows and Linux need completely different treatment:
       * Windows: register the DLL directory (os.add_dll_directory doesn't exist
@@ -52,7 +58,7 @@ def _setup_cuda_dlls():
         if not nvidia.is_dir():
             return
         if os.name == "nt":
-            for sub in ("cublas", "cudnn"):
+            for sub in _CUDA_LIBS:
                 bindir = nvidia / sub / "bin"
                 if bindir.is_dir():
                     os.add_dll_directory(str(bindir))
@@ -60,7 +66,7 @@ def _setup_cuda_dlls():
         else:
             import ctypes
             import glob
-            for sub in ("cublas", "cudnn"):  # cublas first: cudnn depends on it
+            for sub in _CUDA_LIBS:
                 for so in sorted(glob.glob(str(nvidia / sub / "lib" / "*.so*"))):
                     try:
                         ctypes.CDLL(so, mode=ctypes.RTLD_GLOBAL)
@@ -129,11 +135,15 @@ def load_wav(path: Path) -> np.ndarray:
     return np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
 
 
-def transcribe(wav_path: Path, language: str | None, progress_cb=None):
-    """Run whisper. Returns (segments list, detected language, duration)."""
+def transcribe(audio: np.ndarray, language: str | None, progress_cb=None):
+    """Run whisper on 16 kHz mono float32 audio (from load_wav).
+
+    Takes an array, not a path: a path makes faster-whisper decode through
+    PyAV, and its decode_audio breaks on PyAV 19 (dropped `metadata_errors`).
+    Returns (segments list, detected language, duration)."""
     model, _ = get_whisper()
     segments, info = model.transcribe(
-        str(wav_path),
+        audio,
         language=language or None,
         beam_size=5,
         vad_filter=True,
@@ -157,25 +167,43 @@ def transcribe(wav_path: Path, language: str | None, progress_cb=None):
 def diarize(audio: np.ndarray, num_speakers: int | None, progress_cb=None):
     """Return list of (start, end, speaker_int) turns."""
     import sherpa_onnx
+    import config as app_config
 
-    config = sherpa_onnx.OfflineSpeakerDiarizationConfig(
-        segmentation=sherpa_onnx.OfflineSpeakerSegmentationModelConfig(
-            pyannote=sherpa_onnx.OfflineSpeakerSegmentationPyannoteModelConfig(
-                model=str(SEG_MODEL)),
-            num_threads=DIAR_THREADS,
-        ),
-        embedding=sherpa_onnx.SpeakerEmbeddingExtractorConfig(
-            model=str(EMB_MODEL),
-            num_threads=DIAR_THREADS,
-        ),
-        clustering=sherpa_onnx.FastClusteringConfig(
-            num_clusters=num_speakers or -1,
-            threshold=DIAR_THRESHOLD,
-        ),
-        min_duration_on=0.3,
-        min_duration_off=0.5,
-    )
-    sd = sherpa_onnx.OfflineSpeakerDiarization(config)
+    def build(emb_provider):
+        return sherpa_onnx.OfflineSpeakerDiarization(sherpa_onnx.OfflineSpeakerDiarizationConfig(
+            # Segmentation always stays on CPU: it's a tiny model run one
+            # window at a time, so GPU transfer overhead made it 2.6x SLOWER
+            # (15 min of meeting audio, RTX 4050: 79s GPU vs 30s CPU).
+            segmentation=sherpa_onnx.OfflineSpeakerSegmentationModelConfig(
+                pyannote=sherpa_onnx.OfflineSpeakerSegmentationPyannoteModelConfig(
+                    model=str(SEG_MODEL)),
+                num_threads=DIAR_THREADS,
+                provider="cpu",
+            ),
+            # TitaNet embeddings do gain from the GPU (50s vs 74s); needs the
+            # CUDA build of sherpa-onnx from requirements-gpu.txt.
+            embedding=sherpa_onnx.SpeakerEmbeddingExtractorConfig(
+                model=str(EMB_MODEL),
+                num_threads=DIAR_THREADS,
+                provider=emb_provider,
+            ),
+            clustering=sherpa_onnx.FastClusteringConfig(
+                num_clusters=num_speakers or -1,
+                threshold=DIAR_THRESHOLD,
+            ),
+            min_duration_on=0.3,
+            min_duration_off=0.5,
+        ))
+
+    sd = None
+    if (app_config.load().get("device") or "auto") != "cpu":
+        _setup_cuda_dlls()
+        try:
+            sd = build("cuda")
+        except Exception as e:  # CPU-only sherpa-onnx build or missing CUDA libs
+            print(f"[pipeline] diarization on CPU (CUDA unavailable: {e})", flush=True)
+    if sd is None:
+        sd = build("cpu")
 
     def cb(done, total, arg=None):
         if progress_cb:
@@ -236,12 +264,12 @@ def run_job(audio_path: Path, work_dir: Path, language: str | None,
     status_cb("converting", 2)
     convert_to_wav(audio_path, wav)
 
+    audio = load_wav(wav)
     status_cb("transcribing", 5)
     segments, lang, duration = transcribe(
-        wav, language, lambda f: status_cb("transcribing", 5 + f * 60))
+        audio, language, lambda f: status_cb("transcribing", 5 + f * 60))
 
     status_cb("diarizing", 66)
-    audio = load_wav(wav)
     try:
         turns = diarize(audio, num_speakers,
                         lambda f: status_cb("diarizing", 66 + f * 28))
