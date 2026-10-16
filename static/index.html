@@ -377,6 +377,17 @@
                     <span x-icon="'users'"></span><span x-text="$t('diar.action')"></span>
                   </button>
                 </div>
+                <div class="dnote dnote--top" x-show="fellBack" x-cloak role="note" :aria-label="$t('fb.title')">
+                  <span class="dnote__icon" x-icon="'info'"></span>
+                  <div class="dnote__text">
+                    <p class="fb__lead" x-text="$t('fb.lead')"></p>
+                    <p class="fb__why" x-text="fallbackReason"></p>
+                    <p class="fb__detail" x-show="fallbackDetail" x-text="fallbackDetail"></p>
+                  </div>
+                  <button type="button" class="btn dnote__btn" @click="openRedetect()">
+                    <span x-icon="'users'"></span><span x-text="$t('fb.retry')"></span>
+                  </button>
+                </div>
               </div>
             </template>
 
@@ -872,17 +883,60 @@
       <section class="dset" id="set-spkmodel" aria-labelledby="h-spkmodel">
         <div class="dset__head">
           <h3 class="dset__title" id="h-spkmodel" x-text="$t('set.spk.title')"></h3>
+          <p class="fstate" :class="'is-' + sec.spkmodel.state" role="status" aria-live="polite">
+            <span x-icon="stateIcon('spkmodel')" x-show="sec.spkmodel.state !== 'idle'"></span>
+            <span x-text="stateText('spkmodel')"></span>
+            <button type="button" class="fstate__retry" x-show="sec.spkmodel.state === 'error'" @click="retry('spkmodel')" x-text="$t('set.retry')"></button>
+          </p>
         </div>
         <p class="dhint dhint--top" x-text="$t('set.spk.hint')"></p>
-        <ul class="models" :aria-label="$t('set.spk.title')">
-          <li class="model">
-            <span class="model__text">
-              <span class="model__name" x-text="$t('set.spk.model')"></span>
-              <span class="model__desc" x-text="$t('set.spk.model.desc')"></span>
+
+        <fieldset class="choices">
+          <legend class="sr-only" x-text="$t('set.spk.title')"></legend>
+          <label class="choice" :class="{ 'is-on': diarizer === 'standard' && !nemoConfirm }">
+            <input type="radio" name="diarizer" value="standard" :checked="diarizer === 'standard'" @change="setDiarizer('standard')">
+            <span class="choice__text">
+              <span class="choice__name" x-text="$t('set.spk.model')"></span>
+              <span class="choice__desc" x-text="$t('set.spk.model.desc')"></span>
             </span>
-            <span class="pill pill--ready"><span x-icon="'check'"></span><span x-text="$t('set.model.active')"></span></span>
-          </li>
-        </ul>
+          </label>
+          <label class="choice" :class="{ 'is-on': diarizer === 'nemotron' || nemoConfirm }">
+            <input type="radio" name="diarizer" value="nemotron" :checked="diarizer === 'nemotron'" @change="setDiarizer('nemotron', $event)">
+            <span class="choice__text">
+              <span class="choice__name" x-text="$t('set.spk.nemo')"></span>
+              <span class="choice__desc" x-text="$t('set.spk.nemo.desc')"></span>
+            </span>
+          </label>
+        </fieldset>
+
+        <!-- Soft gate: this PC may struggle. One confirm, then it saves. -->
+        <div class="warn" x-show="nemoConfirm" x-cloak role="alert">
+          <span x-icon="'alert-triangle'"></span>
+          <div>
+            <p class="nemo__text" x-text="nemoGateText"></p>
+            <div class="nemo__actions">
+              <button type="button" class="btn btn--solid" @click="confirmNemo()" x-text="$t('set.spk.nemo.anyway')"></button>
+              <button type="button" class="btn" @click="nemoConfirm = false" x-text="$t('set.spk.nemo.cancel')"></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chosen but not installed yet: offer the one-click install. -->
+        <div class="nemo__setup" x-show="diarizer === 'nemotron' && !nemoReady" x-cloak>
+          <p class="dnote">
+            <span x-icon="nemoInstalling ? 'loader' : 'alert-triangle'"></span>
+            <span x-text="nemoStatusText"></span>
+          </p>
+          <div class="bar" x-show="nemoInstalling" role="progressbar" :aria-label="$t('set.spk.nemo.installing')">
+            <div class="bar__fill" :style="{ width: (nemoProgress === null ? 100 : nemoProgress) + '%' }"></div>
+          </div>
+          <button type="button" class="btn btn--solid" x-show="!nemoInstalling" @click="installNemo()">
+            <span x-icon="'download'"></span><span x-text="$t('set.spk.nemo.install')"></span>
+          </button>
+        </div>
+        <p class="dnote dnote--plain" x-show="diarizer === 'nemotron' && nemoReady" x-cloak>
+          <span x-icon="'check'"></span><span x-text="$t('set.spk.nemo.ready')"></span>
+        </p>
       </section>
 
       <section class="dset" id="set-speakers-count" aria-labelledby="h-spkcount">

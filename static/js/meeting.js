@@ -609,7 +609,29 @@ export function registerMeeting(Alpine) {
           const known = ["ms", "en"].includes(m.detected_language);
           parts.push(this.t("meeting.lang", { lang: known ? this.t("lang." + m.detected_language) : m.detected_language.toUpperCase() }));
         }
+        // Only meetings processed since the speaker-model choice exists say which one ran.
+        if (m.diarizer) parts.push(this.t("meeting.spkby", { model: this.diarizerName(m.diarizer) }));
         return parts.join(" · ");
+      },
+      diarizerName(d) {
+        if (d === "nemotron") return this.t("meeting.spkby.nemotron");
+        if (d === "standard") return this.t("meeting.spkby.standard");
+        return this.t("meeting.spkby.fellback");   // "standard (...)": Nemotron was chosen but not used
+      },
+
+      // ------------------------------------------------------------ Nemotron-3 fallback notice
+      // Shown when Nemotron-3 was chosen but Standard labelled the speakers, with the reason.
+      get fellBack() { return this.state === "ready" && String(this.meta?.diarizer || "").startsWith("standard ("); },
+      get fallbackReason() {
+        const fb = this.meta?.diarizer_fallback;
+        if (!fb) return this.t("fb.reason.unknown");
+        const key = "fb.reason." + fb.code;
+        const text = this.t(key);
+        return text === key ? this.t("fb.reason.error") : text;
+      },
+      get fallbackDetail() {
+        const fb = this.meta?.diarizer_fallback;
+        return fb && ["error", "out_of_memory"].includes(fb.code) ? fb.detail : "";
       },
 
       stageName() {

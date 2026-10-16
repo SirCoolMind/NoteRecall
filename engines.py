@@ -302,10 +302,12 @@ def transcribe_gemini(audio_path: Path, work_dir: Path, language: str | None,
     # local diarization for labels consistent across the whole recording.
     status_cb("diarizing", 88)
     speakers_by = "gemini (per chunk)"
+    diarizer = fallback = None
     try:
         if pl.SEG_MODEL.exists() and pl.EMB_MODEL.exists():
-            turns = pl.diarize(pl.load_wav(wav), cfg.get("num_speakers") or None,
-                               lambda f: status_cb("diarizing", 88 + f * 6))
+            turns, diarizer = pl.diarize_labeled(pl.load_wav(wav), cfg.get("num_speakers") or None,
+                                                 lambda f: status_cb("diarizing", 88 + f * 6))
+            fallback = pl.last_fallback
             if turns:
                 for s in all_segs:
                     s["speaker"] = -1
@@ -328,7 +330,9 @@ def transcribe_gemini(audio_path: Path, work_dir: Path, language: str | None,
     return {"segments": all_segs, "language": language or "ms",
             "duration": round(duration, 1),
             "num_speakers": len({s["speaker"] for s in all_segs}),
-            "speakers_by": speakers_by, "chunks": len(chunks)}
+            "speakers_by": speakers_by, "chunks": len(chunks),
+            "diarizer": diarizer if speakers_by == "local diarization" else None,
+            "diarizer_fallback": fallback if speakers_by == "local diarization" else None}
 
 
 def test_key(api_key: str, model: str) -> dict:

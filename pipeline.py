@@ -94,6 +94,8 @@ def get_whisper():
 
     _whisper_model = None
     if device != "cpu":
+        import nemo_diar
+        nemo_diar.unload(gpu_only=True)   # one model on the graphics card at a time
         try:
             m = WhisperModel(model_name, device="cuda", compute_type="float16")
             # force weight load / cuda init so failure happens here, not mid-job
@@ -214,6 +216,74 @@ def diarize(audio: np.ndarray, num_speakers: int | None, progress_cb=None):
     return [(r.start, r.end, r.speaker) for r in result]
 
 
+def unload_whisper() -> bool:
+    """Drop the cached Whisper model (frees its RAM or graphics memory). It
+    loads again by itself on the next transcription. True if one was loaded."""
+    global _whisper_model, _whisper_device, _whisper_key
+    if _whisper_model is None:
+        return False
+    _whisper_model, _whisper_device, _whisper_key = None, None, None
+    import gc
+    gc.collect()
+    return True
+
+
+def _release_whisper_gpu():
+    """Unload Whisper from the graphics card before Nemotron runs. Nemotron's
+    memory grows with the recording (~0.9 GB for 15 min, ~5 GB for 2 h on an
+    RTX 4050), and Whisper large-v3 holds ~3 GB, so on a 6 GB card the two do
+    not fit together. Whisper reloads by itself on the next transcription."""
+    if _whisper_model is not None and str(_whisper_device).startswith("cuda"):
+        unload_whisper()
+
+
+# Why the last diarize_labeled() call fell back from Nemotron-3, or None.
+# One worker thread runs jobs, so the job that just called it reads its own value.
+last_fallback = None
+
+
+def fallback_reason(e: Exception) -> dict:
+    """A Nemotron failure -> {"code", "detail"} for the meeting page. code:
+    out_of_memory | not_installed | model_missing | error."""
+    text = f"{type(e).__name__}: {e}"
+    low = text.lower()
+    if "out of memory" in low or "outofmemory" in low:
+        code = "out_of_memory"
+    elif isinstance(e, ImportError):
+        code = "not_installed"
+    elif "is missing from models" in low:
+        code = "model_missing"
+    else:
+        code = "error"
+    return {"code": code, "detail": text[:300]}
+
+
+def diarize_labeled(audio: np.ndarray, num_speakers: int | None, progress_cb=None):
+    """diarize() honouring the "diarizer" setting. Returns (turns, label), label
+    being which model produced them: "standard", "nemotron", or a "standard (...)"
+    note when Nemotron was chosen but could not be used (the reason is left in
+    last_fallback). Never raises because of Nemotron: any failure there falls
+    back to the standard diarizer."""
+    global last_fallback
+    import config as appconfig
+    last_fallback = None
+    label = "standard"
+    if appconfig.load().get("diarizer") == "nemotron":
+        import nemo_diar
+        if (num_speakers or 0) > nemo_diar.MAX_SPEAKERS:
+            label = "standard (over 8 speakers)"
+            last_fallback = {"code": "over_8", "detail": f"{num_speakers} speakers asked for"}
+        else:
+            try:
+                _release_whisper_gpu()
+                return nemo_diar.diarize(audio, num_speakers, progress_cb), "nemotron"
+            except Exception as e:
+                print(f"[pipeline] Nemotron diarization failed ({e}); using standard", flush=True)
+                label = "standard (nemotron failed)"
+                last_fallback = fallback_reason(e)
+    return diarize(audio, num_speakers, progress_cb), label
+
+
 def assign_speakers(segments, turns):
     """Give each transcript segment the speaker with the largest time overlap."""
     for seg in segments:
@@ -270,9 +340,10 @@ def run_job(audio_path: Path, work_dir: Path, language: str | None,
         audio, language, lambda f: status_cb("transcribing", 5 + f * 60))
 
     status_cb("diarizing", 66)
+    diarizer = None
     try:
-        turns = diarize(audio, num_speakers,
-                        lambda f: status_cb("diarizing", 66 + f * 28))
+        turns, diarizer = diarize_labeled(audio, num_speakers,
+                                          lambda f: status_cb("diarizing", 66 + f * 28))
         segments = assign_speakers(segments, turns)
         n_speakers = len({s for _, _, s in turns}) if turns else 0
     except Exception as e:
@@ -282,7 +353,8 @@ def run_job(audio_path: Path, work_dir: Path, language: str | None,
     wav.unlink(missing_ok=True)
     status_cb("summarizing", 95)
     return {"segments": segments, "language": lang,
-            "duration": round(duration, 1), "num_speakers": n_speakers}
+            "duration": round(duration, 1), "num_speakers": n_speakers,
+            "diarizer": diarizer, "diarizer_fallback": last_fallback if diarizer else None}
 
 
 def rediarize_job(audio_path: Path, work_dir: Path, segments: list,
@@ -293,12 +365,13 @@ def rediarize_job(audio_path: Path, work_dir: Path, segments: list,
     convert_to_wav(audio_path, wav)
     status_cb("diarizing", 10)
     audio = load_wav(wav)
-    turns = diarize(audio, num_speakers,
-                    lambda f: status_cb("diarizing", 10 + f * 85))
+    turns, diarizer = diarize_labeled(audio, num_speakers,
+                                      lambda f: status_cb("diarizing", 10 + f * 85))
     for s in segments:
         s["speaker"] = -1
     segments = assign_speakers(segments, turns)
     wav.unlink(missing_ok=True)
     status_cb("summarizing", 95)
     n_speakers = len({s for _, _, s in turns}) if turns else 0
-    return {"segments": segments, "num_speakers": n_speakers}
+    return {"segments": segments, "num_speakers": n_speakers, "diarizer": diarizer,
+            "diarizer_fallback": last_fallback}

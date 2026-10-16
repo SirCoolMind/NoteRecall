@@ -13,5 +13,8 @@
   "_device": "auto = use an NVIDIA GPU if present, else CPU. cpu = force CPU (same accuracy, slower).",
 
   "whisper_model": "large-v3",
-  "_whisper_model": "large-v3 recommended, on GPU or CPU. Smaller models silently translate Malay/English speech instead of transcribing it."
+  "_whisper_model": "large-v3 recommended, on GPU or CPU. Smaller models silently translate Malay/English speech instead of transcribing it.",
+
+  "diarizer": "standard",
+  "_diarizer": "standard = built-in speaker detection. nemotron = experimental NVIDIA Nemotron-3 model (extra ~3 GB install, NVIDIA GPU recommended, max 8 speakers). Falls back to standard if it fails."
 }

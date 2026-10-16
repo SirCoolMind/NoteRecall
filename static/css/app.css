@@ -481,3 +481,10 @@
 .model__name { font-weight: 600; overflow-wrap: anywhere; }
 .model__desc { color: var(--ink-2); font-size: var(--fs-small); }
 .model .pill { flex: none; }
+
+/* Settings -> Speakers: Nemotron-3 soft gate and install. */
+.nemo__text { margin: 0; max-width: var(--measure); }
+.nemo__actions { display: flex; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-3); }
+.nemo__setup { display: grid; gap: var(--sp-3); justify-items: start; margin: 0 0 var(--sp-4); }
+.nemo__setup .dnote { margin: 0; }
+.nemo__setup .bar { width: 100%; max-width: var(--measure); }
