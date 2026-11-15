@@ -4,7 +4,8 @@
 
 import { SPEAKER_CHOICES } from "./segmented.js";
 
-const SECTIONS = ["engine", "device", "defaults", "speakers", "interface"];
+const SECTIONS = ["engine", "device", "defaults", "speakers", "spkmodel", "interface"];
+const NEMO_STEPS = ["nemo_toolkit", "nemotron_model"];
 const SAVED_VISIBLE_MS = 2500;
 const TEXT_DEBOUNCE_MS = 700;
 const WHISPER_MODELS = ["large-v3", "medium"];
@@ -28,6 +29,8 @@ export function registerSettings(Alpine) {
     geminiModel: "",
     defaultLanguage: "",
     defaultSpeakers: "0",
+    diarizer: "standard",   // speaker model: "standard" | "nemotron" (experimental)
+    nemoConfirm: false,     // the soft-gate warning is open, waiting for "Use anyway"
     speakerChoices: SPEAKER_CHOICES,
     hasKey: false,
     keyTail: "",
@@ -77,6 +80,7 @@ export function registerSettings(Alpine) {
       this.defaultLanguage = ["ms", "en"].includes(cfg.default_language) ? cfg.default_language : "";
       const n = Number(cfg.default_speakers);
       this.defaultSpeakers = this.speakerChoices.includes(n) ? String(n) : "0";
+      this.diarizer = cfg.diarizer === "nemotron" ? "nemotron" : "standard";
       this.noteKey(cfg);
     },
 
@@ -245,6 +249,58 @@ export function registerSettings(Alpine) {
     },
     whisperLabel(name) {
       return WHISPER_MODELS.includes(name) ? this.t("set.whisper." + name) : this.t("set.whisper.other", { name });
+    },
+
+    // ---------------------------------------------------------------- speaker model (Nemotron-3 is optional)
+    get nemoGate() { return Alpine.store("setup").diarizerGate || { ok: true, reasons: [] }; },
+    get nemoGateText() {
+      const g = this.nemoGate;
+      if (g.ok) return "";
+      if (g.reasons.includes("no_gpu")) return this.t("set.spk.nemo.gate.no_gpu");
+      return g.reasons.map((r) => this.t("set.spk.nemo.gate." + r, { gb: ((g.vram_mb || 0) / 1024).toFixed(1) })).join(" ");
+    },
+    nemoCheck(id) { return (this.checks || []).find((c) => c.id === id); },
+    get nemoReady() { return NEMO_STEPS.every((id) => (this.nemoCheck(id) || {}).ok); },
+    nemoItem(id) { return (Alpine.store("setup").install.items || {})[id] || null; },
+    get nemoInstalling() {
+      return NEMO_STEPS.some((id) => ["pending", "running"].includes((this.nemoItem(id) || {}).state));
+    },
+    get nemoProgress() {
+      const it = NEMO_STEPS.map((id) => this.nemoItem(id)).find((x) => x && x.state === "running");
+      return it && typeof it.progress === "number" ? Math.round(it.progress * 100) : null;
+    },
+    get nemoStatusText() {
+      const running = NEMO_STEPS.find((id) => (this.nemoItem(id) || {}).state === "running");
+      if (running) {
+        const it = this.nemoItem(running);
+        return this.t("set.spk.nemo.step." + running) + (it.message ? " · " + it.message : "");
+      }
+      if (this.nemoInstalling) return this.t("set.spk.nemo.installing");
+      const bad = NEMO_STEPS.map((id) => this.nemoItem(id)).find((x) => x && x.state === "failed");
+      if (bad) return this.t("set.spk.nemo.failed", { reason: bad.message });
+      return this.t("set.spk.nemo.missing");
+    },
+    setDiarizer(value, ev) {
+      if (value === "nemotron" && !this.nemoGate.ok && this.diarizer !== "nemotron") {
+        this.nemoConfirm = true;      // soft gate: ask once; the radio goes back until confirmed
+        if (ev) {
+          const std = ev.target.closest("fieldset").querySelector('input[value="standard"]');
+          if (std) std.checked = true;
+        }
+        return;
+      }
+      this.nemoConfirm = false;
+      this.diarizer = value;
+      this.send("spkmodel", { diarizer: value }).then(() => this.refreshSoon());
+    },
+    confirmNemo() {
+      this.nemoConfirm = false;
+      this.diarizer = "nemotron";
+      this.send("spkmodel", { diarizer: "nemotron" }).then(() => this.refreshSoon());
+    },
+    installNemo() {
+      const missing = NEMO_STEPS.filter((id) => !(this.nemoCheck(id) || {}).ok);
+      return Alpine.store("setup").start(missing.length ? missing : NEMO_STEPS);
     },
 
     // ---------------------------------------------------------------- defaults for new recordings

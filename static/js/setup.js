@@ -15,6 +15,7 @@ export function registerSetup(Alpine) {
     engine: "local",
     os: "linux",
     compute: "cpu",
+    diarizerGate: { ok: true, reasons: [] },   // Nemotron-3 soft gate for this PC
     install: { running: false, items: {} },
     startError: false,
     announcement: "",     // polite live region: item changes, not every progress tick
@@ -37,6 +38,7 @@ export function registerSetup(Alpine) {
         this.engine = s.engine;
         this.os = s.os === "windows" ? "windows" : "linux";
         this.compute = s.compute;
+        if (s.diarizer_gate) this.diarizerGate = s.diarizer_gate;
         this.appDir = s.app_dir || "";
         this.noteInstall(s.install);
         this.loaded = true;

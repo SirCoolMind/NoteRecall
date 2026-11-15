@@ -38,21 +38,52 @@ _whisper_device = None
 _whisper_key = None  # (model_name, device) the cache was loaded with
 
 
+# pip-installed CUDA libraries, in load order (a library's deps come first).
+# ctranslate2 (Whisper) needs cublas + cudnn; sherpa-onnx's CUDA build
+# (diarization) also needs the runtime, cufft (+ nvjitlink) and curand.
+_CUDA_LIBS = ("cuda_runtime", "cublas", "cudnn", "nvjitlink", "cufft", "curand")
+
+
+def _preload_sherpa_ort():
+    """Windows: load sherpa-onnx's own onnxruntime_providers_shared.dll first.
+
+    faster-whisper's voice filter (Silero VAD) uses the separate pip onnxruntime,
+    which ships a DLL with the same name. Windows reuses a DLL already loaded by
+    name, so once Whisper has run, sherpa's CUDA provider binds to the wrong
+    copy and fails ("Error 1114 ... Failed to load shared library"), dropping
+    speaker detection to the CPU. Loading sherpa's copy first fixes both: the
+    pip onnxruntime still works with it."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        import importlib.util
+        spec = importlib.util.find_spec("sherpa_onnx")
+        if spec is None or not spec.origin:
+            return
+        libdir = Path(spec.origin).parent / "lib"
+        if (libdir / "onnxruntime_providers_cuda.dll").exists():   # CUDA build only
+            ctypes.WinDLL(str(libdir / "onnxruntime_providers_shared.dll"))
+    except Exception as e:
+        print(f"[pipeline] sherpa-onnx preload skipped: {e}", flush=True)
+
+
 def _setup_cuda_dlls():
-    """Make the pip-installed cuBLAS/cuDNN libraries visible to ctranslate2.
+    """Make the pip-installed CUDA libraries visible to ctranslate2 / onnxruntime.
 
     Windows and Linux need completely different treatment:
       * Windows: register the DLL directory (os.add_dll_directory doesn't exist
         on Linux, so this must never run there).
       * Linux: the dynamic loader reads LD_LIBRARY_PATH at process start, so
         setting it now would be ignored — preload the .so files instead."""
+    _preload_sherpa_ort()
     try:
         import sysconfig
         nvidia = Path(sysconfig.get_paths()["purelib"]) / "nvidia"
         if not nvidia.is_dir():
             return
         if os.name == "nt":
-            for sub in ("cublas", "cudnn"):
+            for sub in _CUDA_LIBS:
                 bindir = nvidia / sub / "bin"
                 if bindir.is_dir():
                     os.add_dll_directory(str(bindir))
@@ -60,7 +91,7 @@ def _setup_cuda_dlls():
         else:
             import ctypes
             import glob
-            for sub in ("cublas", "cudnn"):  # cublas first: cudnn depends on it
+            for sub in _CUDA_LIBS:
                 for so in sorted(glob.glob(str(nvidia / sub / "lib" / "*.so*"))):
                     try:
                         ctypes.CDLL(so, mode=ctypes.RTLD_GLOBAL)
@@ -88,6 +119,8 @@ def get_whisper():
 
     _whisper_model = None
     if device != "cpu":
+        import nemo_diar
+        nemo_diar.unload(gpu_only=True)   # one model on the graphics card at a time
         try:
             m = WhisperModel(model_name, device="cuda", compute_type="float16")
             # force weight load / cuda init so failure happens here, not mid-job
@@ -129,11 +162,15 @@ def load_wav(path: Path) -> np.ndarray:
     return np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
 
 
-def transcribe(wav_path: Path, language: str | None, progress_cb=None):
-    """Run whisper. Returns (segments list, detected language, duration)."""
+def transcribe(audio: np.ndarray, language: str | None, progress_cb=None):
+    """Run whisper on 16 kHz mono float32 audio (from load_wav).
+
+    Takes an array, not a path: a path makes faster-whisper decode through
+    PyAV, and its decode_audio breaks on PyAV 19 (dropped `metadata_errors`).
+    Returns (segments list, detected language, duration)."""
     model, _ = get_whisper()
     segments, info = model.transcribe(
-        str(wav_path),
+        audio,
         language=language or None,
         beam_size=5,
         vad_filter=True,
@@ -157,25 +194,43 @@ def transcribe(wav_path: Path, language: str | None, progress_cb=None):
 def diarize(audio: np.ndarray, num_speakers: int | None, progress_cb=None):
     """Return list of (start, end, speaker_int) turns."""
     import sherpa_onnx
+    import config as app_config
 
-    config = sherpa_onnx.OfflineSpeakerDiarizationConfig(
-        segmentation=sherpa_onnx.OfflineSpeakerSegmentationModelConfig(
-            pyannote=sherpa_onnx.OfflineSpeakerSegmentationPyannoteModelConfig(
-                model=str(SEG_MODEL)),
-            num_threads=DIAR_THREADS,
-        ),
-        embedding=sherpa_onnx.SpeakerEmbeddingExtractorConfig(
-            model=str(EMB_MODEL),
-            num_threads=DIAR_THREADS,
-        ),
-        clustering=sherpa_onnx.FastClusteringConfig(
-            num_clusters=num_speakers or -1,
-            threshold=DIAR_THRESHOLD,
-        ),
-        min_duration_on=0.3,
-        min_duration_off=0.5,
-    )
-    sd = sherpa_onnx.OfflineSpeakerDiarization(config)
+    def build(emb_provider):
+        return sherpa_onnx.OfflineSpeakerDiarization(sherpa_onnx.OfflineSpeakerDiarizationConfig(
+            # Segmentation always stays on CPU: it's a tiny model run one
+            # window at a time, so GPU transfer overhead made it 2.6x SLOWER
+            # (15 min of meeting audio, RTX 4050: 79s GPU vs 30s CPU).
+            segmentation=sherpa_onnx.OfflineSpeakerSegmentationModelConfig(
+                pyannote=sherpa_onnx.OfflineSpeakerSegmentationPyannoteModelConfig(
+                    model=str(SEG_MODEL)),
+                num_threads=DIAR_THREADS,
+                provider="cpu",
+            ),
+            # TitaNet embeddings do gain from the GPU (50s vs 74s); needs the
+            # CUDA build of sherpa-onnx from requirements-gpu.txt.
+            embedding=sherpa_onnx.SpeakerEmbeddingExtractorConfig(
+                model=str(EMB_MODEL),
+                num_threads=DIAR_THREADS,
+                provider=emb_provider,
+            ),
+            clustering=sherpa_onnx.FastClusteringConfig(
+                num_clusters=num_speakers or -1,
+                threshold=DIAR_THRESHOLD,
+            ),
+            min_duration_on=0.3,
+            min_duration_off=0.5,
+        ))
+
+    sd = None
+    if (app_config.load().get("device") or "auto") != "cpu":
+        _setup_cuda_dlls()
+        try:
+            sd = build("cuda")
+        except Exception as e:  # CPU-only sherpa-onnx build or missing CUDA libs
+            print(f"[pipeline] diarization on CPU (CUDA unavailable: {e})", flush=True)
+    if sd is None:
+        sd = build("cpu")
 
     def cb(done, total, arg=None):
         if progress_cb:
@@ -184,6 +239,74 @@ def diarize(audio: np.ndarray, num_speakers: int | None, progress_cb=None):
 
     result = sd.process(audio, callback=cb).sort_by_start_time()
     return [(r.start, r.end, r.speaker) for r in result]
+
+
+def unload_whisper() -> bool:
+    """Drop the cached Whisper model (frees its RAM or graphics memory). It
+    loads again by itself on the next transcription. True if one was loaded."""
+    global _whisper_model, _whisper_device, _whisper_key
+    if _whisper_model is None:
+        return False
+    _whisper_model, _whisper_device, _whisper_key = None, None, None
+    import gc
+    gc.collect()
+    return True
+
+
+def _release_whisper_gpu():
+    """Unload Whisper from the graphics card before Nemotron runs. Nemotron's
+    memory grows with the recording (~0.9 GB for 15 min, ~5 GB for 2 h on an
+    RTX 4050), and Whisper large-v3 holds ~3 GB, so on a 6 GB card the two do
+    not fit together. Whisper reloads by itself on the next transcription."""
+    if _whisper_model is not None and str(_whisper_device).startswith("cuda"):
+        unload_whisper()
+
+
+# Why the last diarize_labeled() call fell back from Nemotron-3, or None.
+# One worker thread runs jobs, so the job that just called it reads its own value.
+last_fallback = None
+
+
+def fallback_reason(e: Exception) -> dict:
+    """A Nemotron failure -> {"code", "detail"} for the meeting page. code:
+    out_of_memory | not_installed | model_missing | error."""
+    text = f"{type(e).__name__}: {e}"
+    low = text.lower()
+    if "out of memory" in low or "outofmemory" in low:
+        code = "out_of_memory"
+    elif isinstance(e, ImportError):
+        code = "not_installed"
+    elif "is missing from models" in low:
+        code = "model_missing"
+    else:
+        code = "error"
+    return {"code": code, "detail": text[:300]}
+
+
+def diarize_labeled(audio: np.ndarray, num_speakers: int | None, progress_cb=None):
+    """diarize() honouring the "diarizer" setting. Returns (turns, label), label
+    being which model produced them: "standard", "nemotron", or a "standard (...)"
+    note when Nemotron was chosen but could not be used (the reason is left in
+    last_fallback). Never raises because of Nemotron: any failure there falls
+    back to the standard diarizer."""
+    global last_fallback
+    import config as appconfig
+    last_fallback = None
+    label = "standard"
+    if appconfig.load().get("diarizer") == "nemotron":
+        import nemo_diar
+        if (num_speakers or 0) > nemo_diar.MAX_SPEAKERS:
+            label = "standard (over 8 speakers)"
+            last_fallback = {"code": "over_8", "detail": f"{num_speakers} speakers asked for"}
+        else:
+            try:
+                _release_whisper_gpu()
+                return nemo_diar.diarize(audio, num_speakers, progress_cb), "nemotron"
+            except Exception as e:
+                print(f"[pipeline] Nemotron diarization failed ({e}); using standard", flush=True)
+                label = "standard (nemotron failed)"
+                last_fallback = fallback_reason(e)
+    return diarize(audio, num_speakers, progress_cb), label
 
 
 def assign_speakers(segments, turns):
@@ -236,15 +359,16 @@ def run_job(audio_path: Path, work_dir: Path, language: str | None,
     status_cb("converting", 2)
     convert_to_wav(audio_path, wav)
 
+    audio = load_wav(wav)
     status_cb("transcribing", 5)
     segments, lang, duration = transcribe(
-        wav, language, lambda f: status_cb("transcribing", 5 + f * 60))
+        audio, language, lambda f: status_cb("transcribing", 5 + f * 60))
 
     status_cb("diarizing", 66)
-    audio = load_wav(wav)
+    diarizer = None
     try:
-        turns = diarize(audio, num_speakers,
-                        lambda f: status_cb("diarizing", 66 + f * 28))
+        turns, diarizer = diarize_labeled(audio, num_speakers,
+                                          lambda f: status_cb("diarizing", 66 + f * 28))
         segments = assign_speakers(segments, turns)
         n_speakers = len({s for _, _, s in turns}) if turns else 0
     except Exception as e:
@@ -254,7 +378,8 @@ def run_job(audio_path: Path, work_dir: Path, language: str | None,
     wav.unlink(missing_ok=True)
     status_cb("summarizing", 95)
     return {"segments": segments, "language": lang,
-            "duration": round(duration, 1), "num_speakers": n_speakers}
+            "duration": round(duration, 1), "num_speakers": n_speakers,
+            "diarizer": diarizer, "diarizer_fallback": last_fallback if diarizer else None}
 
 
 def rediarize_job(audio_path: Path, work_dir: Path, segments: list,
@@ -265,12 +390,13 @@ def rediarize_job(audio_path: Path, work_dir: Path, segments: list,
     convert_to_wav(audio_path, wav)
     status_cb("diarizing", 10)
     audio = load_wav(wav)
-    turns = diarize(audio, num_speakers,
-                    lambda f: status_cb("diarizing", 10 + f * 85))
+    turns, diarizer = diarize_labeled(audio, num_speakers,
+                                      lambda f: status_cb("diarizing", 10 + f * 85))
     for s in segments:
         s["speaker"] = -1
     segments = assign_speakers(segments, turns)
     wav.unlink(missing_ok=True)
     status_cb("summarizing", 95)
     n_speakers = len({s for _, _, s in turns}) if turns else 0
-    return {"segments": segments, "num_speakers": n_speakers}
+    return {"segments": segments, "num_speakers": n_speakers, "diarizer": diarizer,
+            "diarizer_fallback": last_fallback}

@@ -3,6 +3,7 @@
 Run:  .venv\\Scripts\\python.exe server.py   then open http://localhost:8756
 """
 
+import asyncio
 import json
 import os
 import queue
@@ -23,6 +24,7 @@ import config
 import engines
 import ffmpeg_tools
 import installer as installer_mod
+import nemo_diar
 import pipeline
 import summarizer
 import updater as updater_mod
@@ -115,6 +117,17 @@ def speaker_label(meta: dict, spk: int) -> str:
 
 # ---------------------------------------------------------------- worker
 
+def _note_diarizer(meta: dict, result: dict):
+    """Which speaker model ran, and when Nemotron-3 was chosen but Standard ran
+    instead, why (diarizer_fallback: {"code", "detail"}); a clean run clears it."""
+    if result.get("diarizer"):
+        meta["diarizer"] = result["diarizer"]
+    if result.get("diarizer_fallback"):
+        meta["diarizer_fallback"] = result["diarizer_fallback"]
+    else:
+        meta.pop("diarizer_fallback", None)
+
+
 def worker():
     while True:
         kind, mid, arg = jobs.get()
@@ -142,6 +155,7 @@ def worker():
                 result = pipeline.rediarize_job(
                     d / meta["audio_file"], d, segments, arg or None, status)
                 meta["num_speakers"] = arg or 0
+                _note_diarizer(meta, result)
                 # re-detecting speakers intentionally resets the names; persist
                 # the reset now so later merges pick up the empty dict from disk
                 with meta_lock(mid):
@@ -159,6 +173,7 @@ def worker():
                             detected_language=result["language"])
                 if result.get("speakers_by"):
                     meta["speakers_by"] = result["speakers_by"]
+                _note_diarizer(meta, result)
                 if result.get("chunks"):
                     meta["chunks"] = result["chunks"]
             # clustering returns arbitrary ids; present them as Speaker 1..N
@@ -220,8 +235,18 @@ def start_background():
         requeue_unfinished()
 
 
+def _quiet_connection_resets(loop, context):
+    """Windows: a browser tab closing or reloading mid-request makes asyncio print
+    a ConnectionResetError traceback (WinError 10054). It is harmless; drop it."""
+    if isinstance(context.get("exception"), ConnectionResetError):
+        return
+    loop.default_exception_handler(context)
+
+
 @asynccontextmanager
 async def lifespan(_app):
+    pipeline._preload_sherpa_ort()   # before anything loads the pip onnxruntime
+    asyncio.get_running_loop().set_exception_handler(_quiet_connection_resets)
     start_background()
     yield
 
@@ -291,6 +316,8 @@ def set_config(body: dict):
         allowed["device"] = body["device"]
     if body.get("whisper_model") in ("large-v3", "medium", "small", "base"):
         allowed["whisper_model"] = body["whisper_model"]
+    if body.get("diarizer") in ("standard", "nemotron"):
+        allowed["diarizer"] = body["diarizer"]
     if body.get("default_language") in ("", "ms", "en"):
         allowed["default_language"] = body["default_language"]
     n = body.get("default_speakers")
@@ -429,6 +456,24 @@ def _fixes(cfg: dict) -> dict:
             "windows": [{"do": "Create a free API key at https://aistudio.google.com/apikey, then paste it in the Google Gemini settings above and press Save"}],
             "linux": [{"do": "Create a free API key at https://aistudio.google.com/apikey, then paste it in the Google Gemini settings above and press Save"}],
         },
+        "nemo_toolkit": {
+            "windows": [{"do": "Optional, experimental. Easiest: Settings → Speakers → Nemotron-3 → Install now. "
+                               "By hand: PyTorch first (CUDA build for NVIDIA cards), then the NeMo packages",
+                         "cmd": f"{WIN_PIP} install torch --index-url {installer_mod.TORCH_CUDA_INDEX}"},
+                        {"do": "Then", "cmd": f"{WIN_PIP} install -r requirements-nemo.txt"}],
+            "linux": [{"do": "Optional, experimental. Easiest: Settings → Speakers → Nemotron-3 → Install now. "
+                             "By hand: PyTorch first (CUDA build for NVIDIA cards), then the NeMo packages",
+                       "cmd": f"{LNX_PIP} install torch --index-url {installer_mod.TORCH_CUDA_INDEX}"},
+                      {"do": "Then", "cmd": f"{LNX_PIP} install -r requirements-nemo.txt"}],
+        },
+        "nemotron_model": {
+            "windows": [{"do": "Download the Nemotron-3 speaker model into models\\nemotron-3-diarization",
+                         "cmd": f'{WIN_PY} -c "from huggingface_hub import hf_hub_download; '
+                                f"hf_hub_download('{nemo_diar.REPO_ID}', '{nemo_diar.MODEL_FILENAME}', local_dir='models/nemotron-3-diarization')\""}],
+            "linux": [{"do": "Download the Nemotron-3 speaker model into models/nemotron-3-diarization",
+                       "cmd": f'{LNX_PY} -c "from huggingface_hub import hf_hub_download; '
+                              f"hf_hub_download('{nemo_diar.REPO_ID}', '{nemo_diar.MODEL_FILENAME}', local_dir='models/nemotron-3-diarization')\""}],
+        },
         "disk": {
             "windows": [{"do": "Free up space, or move the app folder to a bigger drive. Old meetings can be deleted from the meeting list."}],
             "linux": [{"do": "Free up space, or move the app folder to a bigger disk. Old meetings can be deleted from the meeting list."}],
@@ -515,6 +560,17 @@ def _evaluate(cfg: dict) -> dict:
         pipeline.EMB_MODEL.name if pipeline.EMB_MODEL.exists() else "missing from models/",
         req="local")
 
+    # Optional Nemotron-3 speaker detection. Never "required", even while chosen:
+    # a missing install just falls back to the standard diarizer, so it must not
+    # lock Home. Settings -> Speakers offers the install.
+    nemo_ok = nemo_diar.is_installed()
+    add("nemo_toolkit", "NeMo + PyTorch (Nemotron-3 speakers)", nemo_ok,
+        "installed" if nemo_ok else "not installed",
+        "Optional, experimental — only needed for Nemotron-3 speaker detection", req="optional")
+    add("nemotron_model", "Nemotron-3 speaker model", nemo_diar.model_present(),
+        nemo_diar.MODEL_FILENAME if nemo_diar.model_present() else "not downloaded",
+        req="optional")
+
     om = summarizer.ollama_model()
     add("ollama", "Ollama (better summaries)", om, om or "not running",
         "" if om else "Optional — without it you still get a built-in extractive summary",
@@ -530,7 +586,22 @@ def _evaluate(cfg: dict) -> dict:
         "os": osname,
         "os_detail": f"{platform.system()} {platform.release()}",
         "compute": "gpu" if cuda["ok"] and cfg.get("device") != "cpu" else "cpu",
+        "diarizer_gate": _diarizer_gate(),
     }
+
+
+_gate_cache = None
+
+
+def _diarizer_gate() -> dict:
+    """Soft-gate verdict for Nemotron-3 on this PC (cached: the GPU does not change)."""
+    global _gate_cache
+    if _gate_cache is None:
+        import sys
+        gpu = nemo_diar.gpu_info()
+        osname = "mac" if sys.platform == "darwin" else ("windows" if os.name == "nt" else "linux")
+        _gate_cache = nemo_diar.gate(gpu["count"], gpu["vram_mb"], osname, gpu["driver"])
+    return _gate_cache
 
 
 # ---------------------------------------------------------------- updates
@@ -814,7 +885,11 @@ def export(mid: str, format: str = "txt"):
 
 if __name__ == "__main__":
     # HOST=0.0.0.0 to expose it on a LAN / Linux server
+    import port as port_mod
     host = os.environ.get("HOST", "127.0.0.1")
-    port = int(os.environ.get("PORT", "8756"))
+    wanted = int(os.environ.get("PORT") or port_mod.DEFAULT_PORT)
+    port = port_mod.pick(host, wanted)   # taken (another program, or NoteRecall already running)? next one up
+    if port != wanted:
+        print(f"Port {wanted} is in use; using {port} instead.")
     print(f"NoteRecall -> http://{host}:{port}")
     uvicorn.run(app, host=host, port=port, log_level="warning")

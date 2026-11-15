@@ -1,0 +1,15 @@
+# OPTIONAL: Nemotron-3 speaker detection (Settings -> Speakers -> Nemotron-3).
+# Settings installs this for you; nothing in the normal setup needs it.
+#
+# Install PyTorch FIRST, so NeMo does not pull the CPU-only build:
+#   NVIDIA card: pip install torch --index-url https://download.pytorch.org/whl/cu130
+#   no NVIDIA:   pip install torch --index-url https://download.pytorch.org/whl/cpu
+# then:
+#   pip install -r requirements-nemo.txt
+#
+# The Nemotron-3-Diarization model needs NeMo Speech newer than the 3.0.0 PyPI
+# release (RoPE encoder support), so this pins a tested GitHub commit. A zip
+# URL, not git+https, so git does not need to be installed.
+Cython
+packaging
+nemo-toolkit[asr] @ https://github.com/NVIDIA-NeMo/Speech/archive/1688cc3d6a9ade854f544987810c53f605dc86fc.zip

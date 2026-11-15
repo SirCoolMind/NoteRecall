@@ -347,3 +347,8 @@ code.sinline { overflow-wrap: anywhere; }
 .dnote__icon.icon { width: 22px; height: 22px; }
 .dnote__text { flex: 1 1 18rem; margin: 0; min-width: 0; text-wrap: pretty; }
 .dnote__btn { flex: none; }
+.dnote--top { align-items: flex-start; }
+.dnote--top .dnote__icon { margin-top: 2px; }
+.fb__lead { margin: 0; font-weight: 600; }
+.fb__why { margin: var(--sp-1) 0 0; }
+.fb__detail { margin: var(--sp-1) 0 0; color: var(--ink-2); font: var(--fs-meta)/1.4 var(--font-code); overflow-wrap: anywhere; }

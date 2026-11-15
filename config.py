@@ -13,6 +13,7 @@ DEFAULTS = {
     "whisper_model": "large-v3",  # large-v3 | medium | small | base
     "default_language": "",     # upload default: "" = Auto, "ms" or "en"
     "default_speakers": 0,      # upload default: 0 = Auto, otherwise the speaker count
+    "diarizer": "standard",     # "standard" (sherpa-onnx) or "nemotron" (experimental, see nemo_diar.py)
 }
 
 

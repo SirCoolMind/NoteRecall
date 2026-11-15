@@ -75,7 +75,12 @@ install_deps() {
 }
 install_deps
 
-# 4. start the server; open the browser once it responds -------------------
+# 4. a free port: PORT (8756), or the next one up when something already uses it
+PORT="$("$PY" port.py 2>/dev/null || echo "$PORT")"
+export PORT
+URL="http://${HOST}:${PORT}"
+
+# start the server; open the browser once it responds ----------------------
 open_browser() {
   if command -v open >/dev/null 2>&1; then open "$URL"
   elif command -v xdg-open >/dev/null 2>&1; then xdg-open "$URL" >/dev/null 2>&1

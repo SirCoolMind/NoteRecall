@@ -24,10 +24,11 @@ BASE_DIR = Path(__file__).parent
 
 # Run order: packages first (later steps import them), then the big downloads.
 ORDER = ["core", "faster_whisper", "ctranslate2", "sherpa_onnx", "ffmpeg",
-         "whisper_model", "seg_model", "emb_model"]
+         "whisper_model", "seg_model", "emb_model",
+         "nemo_toolkit", "nemotron_model"]   # optional Nemotron-3 speakers: only on request
 STEP_IDS = frozenset(ORDER)
 # A step is pointless when one of these failed earlier in the same run.
-DEPENDS = {"whisper_model": ("faster_whisper",)}
+DEPENDS = {"whisper_model": ("faster_whisper",), "nemotron_model": ("nemo_toolkit",)}
 
 # Same files start.sh / start.bat fetch.
 _RELEASES = "https://github.com/k2-fsa/sherpa-onnx/releases/download"
@@ -173,6 +174,39 @@ def step_emb_model(report):
     _download(EMB_URL, pipeline.EMB_MODEL, report)
 
 
+# PyTorch wheels: the CUDA 13 build needs NVIDIA driver 580+ (nemo_diar.MIN_DRIVER).
+TORCH_CUDA_INDEX = "https://download.pytorch.org/whl/cu130"
+TORCH_CPU_INDEX = "https://download.pytorch.org/whl/cpu"
+
+
+def step_nemo_toolkit(report):
+    """PyTorch first (CUDA build with an NVIDIA card, CPU build without), so the
+    NeMo install does not pull the CPU-only wheel, then requirements-nemo.txt."""
+    import nemo_diar
+    gpu = nemo_diar.gpu_info()["count"]
+    report(None, "PyTorch (" + ("CUDA build, ~2.5 GB" if gpu else "CPU build, ~200 MB") + ")")
+    _pip_install(["torch", "--index-url", TORCH_CUDA_INDEX if gpu else TORCH_CPU_INDEX], report)
+    report(None, "NeMo speech toolkit")
+    _pip_install(["-r", str(BASE_DIR / "requirements-nemo.txt")], report)
+
+
+def step_nemotron_model(report):
+    """The .nemo file straight into models/, not the Hugging Face user cache."""
+    import nemo_diar
+    from huggingface_hub import hf_hub_download
+    stop = threading.Event()
+
+    def watch():
+        while not stop.wait(1.0):
+            report(None, _mb(_dir_size(nemo_diar.MODEL_DIR)))
+
+    threading.Thread(target=watch, daemon=True).start()
+    try:
+        hf_hub_download(nemo_diar.REPO_ID, nemo_diar.MODEL_FILENAME, local_dir=str(nemo_diar.MODEL_DIR))
+    finally:
+        stop.set()
+
+
 def default_steps() -> dict:
     return {
         "core": step_requirements,
@@ -183,6 +217,8 @@ def default_steps() -> dict:
         "whisper_model": step_whisper_model,
         "seg_model": step_seg_model,
         "emb_model": step_emb_model,
+        "nemo_toolkit": step_nemo_toolkit,
+        "nemotron_model": step_nemotron_model,
     }
 
 

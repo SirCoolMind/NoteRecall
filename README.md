@@ -35,7 +35,7 @@ Current version: **0.1.0** — see what changed in the [changelog](CHANGELOG.md)
 | | |
 |---|---|
 | **Computer** | Windows 10 or 11, macOS, or Linux (e.g. Ubuntu) |
-| **Free disk space** | About **6 GB** (the speech model alone is ~3 GB) |
+| **Free disk space** | About **6 GB** (the speech model alone is ~3 GB). The optional Nemotron-3 speaker model needs ~3 GB more |
 | **Internet** | Only for the first start, to download the parts it needs |
 | **Graphics card** | **Not needed.** An NVIDIA card makes it about twice as fast |
 
@@ -279,9 +279,10 @@ touched by `git pull`.
 | `curl: command not found` (Linux) | Run `sudo apt install -y curl`, then start again. |
 | Browser says **"This site can't be reached"** | NoteRecall isn't running yet, or its window was closed. Start it again and wait for `[4/4] Starting NoteRecall`. |
 | Download stopped halfway on first start | Just start again. It continues from where it stopped. |
-| Port **8756 already in use** | NoteRecall is probably already running in another window. Use that one, or close it first. |
+| Opens at **8757** (or higher) instead of 8756 | Something else was already using port 8756, so NoteRecall took the next free one; the start window shows the address. Usually it is NoteRecall itself, still running in another window: use one copy only, since both work on the same meetings. |
 | It is very slow | That's normal without an NVIDIA graphics card: about 25 minutes per hour of audio. You can keep using the computer, and you can close the browser tab — the work continues as long as the black/Terminal window is open. |
-| Too many speakers detected | Open the meeting → **Re-detect with a fixed number** and choose how many people actually spoke. |
+| Too many speakers detected | Open the meeting → **Re-detect with a fixed number** and choose how many people actually spoke. Or try the optional [Nemotron-3 speaker model](#optional-nemotron-3-speaker-detection-experimental). |
+| Meeting says Nemotron-3 **could not be used** | NoteRecall fell back to the Standard speaker detection for that meeting by itself; the notice says why. Fix the cause (often: other programs using the graphics card) and press **Re-detect speakers**. |
 
 Still stuck? Open an issue at
 <https://github.com/SirCoolMind/NoteRecall/issues> and paste the last lines from
@@ -387,6 +388,29 @@ and rebuilds the timing locally with voice-activity detection:
 
 Speakers in cloud mode still come from the local speaker detection.
 
+### Optional: Nemotron-3 speaker detection (experimental)
+
+Speakers normally come from the **Standard** detection (pyannote + TitaNet, run
+through sherpa-onnx). You can switch to NVIDIA's
+[Nemotron-3-Diarization](https://huggingface.co/nvidia/Nemotron-3-Diarization)
+model in **Settings → Speakers**. It only changes who each line is attributed
+to; Whisper still writes the text.
+
+- **Install:** choose Nemotron-3, then **Install now**. It adds PyTorch and NVIDIA
+  NeMo (~3 GB, CUDA build with an NVIDIA card) and the model (~200 MB, in
+  `models/nemotron-3-diarization/`). The normal setup never installs it.
+- **Limits:** up to 8 speakers; Malay was not in its training data; an NVIDIA card
+  with 4 GB+ and driver 580+ is recommended (without one it runs on the CPU, slowly).
+- **Safety net:** if it fails on a meeting (out of graphics memory, missing files,
+  more than 8 speakers asked for), that meeting uses Standard and says why.
+- **Compare:** open a meeting, switch the model in Settings, then **Re-detect
+  speakers**: the text stays, only the speakers change. The meeting's info line
+  says which model labelled it.
+
+On a 36-minute training session (RTX 4050), Standard found 41 "speakers" in
+243 s; Nemotron-3 found 5 in 61 s. It runs in its own short-lived process,
+because PyTorch's CUDA libraries clash with the ones Whisper uses.
+
 ### Better summaries (optional)
 
 The built-in summary picks key sentences from the transcript. For a proper
@@ -430,9 +454,10 @@ More CPU threads is *slower*, not faster — the cap of 8 is deliberate, see
 | `server.py` | web app, job queue, meetings, setup checks, exports |
 | `installer.py` | the in-app **Set up everything** installer |
 | `pipeline.py` | local engine: ffmpeg → Whisper → speaker detection → merge |
+| `nemo_diar.py` | optional Nemotron-3 speaker detection (see `docs/specs/nemotron-diarization.md`) |
 | `engines.py` | cloud engine: chunking, Gemini, timing |
 | `summarizer.py` | Ollama or built-in summaries |
 | `config.py` | reads and writes `config.json` |
 | `static/` | the web interface (`index.html`, `css/`, `js/`, `i18n/` English + Malay, `fonts/`, `icons/`) |
-| `requirements.txt` / `requirements-gpu.txt` | Python packages / extra NVIDIA packages |
+| `requirements.txt` / `requirements-gpu.txt` / `requirements-nemo.txt` | Python packages / extra NVIDIA packages / optional Nemotron-3 packages |
 | `docs/` | project summary, Linux server guide, WSL testing |
