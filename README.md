@@ -206,6 +206,17 @@ If the speakers look wrong (for example 40 speakers in a meeting of 5 people),
 open the meeting and use **Re-detect with a fixed number**. It only redoes the
 speaker labels, so it is quick.
 
+**Optional: a YouTube link instead of a file.** This is off unless you turn it
+on. Open **Settings (gear icon) → General → YouTube links**, tick **Add
+recordings from a YouTube link**, and click **Install the downloader** (about
+3 MB, one time). The first page then has a field under **Choose a recording**:
+paste a link to one YouTube video and click **Add link**. NoteRecall downloads
+the audio to your computer and treats it like any other recording. It needs
+internet, works for public videos up to 6 hours (not live streams, private or
+age-restricted videos), and takes one video per link, not a playlist. If links
+stop working one day, click **Update the downloader** in the same place:
+YouTube changes often. Untick the box and the field is gone again.
+
 ---
 
 ## 5. Start it again later, or stop it
@@ -476,6 +487,7 @@ More CPU threads is *slower*, not faster — the cap of 8 is deliberate, see
 | `corrections.py` | corrections to a finished transcript, and the kept original |
 | `search.py` | search across every transcript |
 | `timing.py` | the rule that stops a few words from "lasting" minutes |
+| `linkfetch.py` | optional: download the audio of a YouTube link (off by default) |
 | `config.py` | reads and writes `config.json` |
 | `static/` | the web interface (`index.html`, `css/`, `js/`, `i18n/` English + Malay, `fonts/`, `icons/`) |
 | `requirements.txt` / `requirements-gpu.txt` / `requirements-nemo.txt` | Python packages / extra NVIDIA packages / optional Nemotron-3 packages |

@@ -155,7 +155,7 @@
       </div>
 
         <section class="home" x-data="home" x-show="!$store.route.id" aria-labelledby="drop-title"
-                 @dragover.window.prevent @drop.window.prevent @settings-defaults.window="applyDefaults($event.detail)">
+                 @dragover.window.prevent @drop.window.prevent @settings-defaults.window="applyDefaults($event.detail)" @settings-links.window="links = $event.detail.on">
           <div class="drop-slot" :class="{ 'is-over': dragging, 'is-busy': uploading, 'is-locked': locked }" role="group" aria-labelledby="drop-title" :aria-disabled="locked"
                @dragenter.prevent="dragging = true" @dragover.prevent="dragging = true"
                @dragleave="onDragLeave($event)" @drop.prevent="onDrop($event)" @click="onSlotClick($event)">
@@ -167,6 +167,14 @@
               <button type="button" class="plate-btn" :disabled="locked" @click="openPicker()" x-text="$t('home.drop.choose')"></button>
               <p class="drop-slot__hint" x-text="locked ? $t('home.drop.locked') : $t('home.drop.hint')"></p>
             </div>
+
+            <form class="link" x-show="links" x-cloak @submit.prevent="addLink()">
+              <label class="sr-only" for="link-url" x-text="$t('home.link.label')"></label>
+              <input id="link-url" class="link__input" type="url" inputmode="url" autocomplete="off" spellcheck="false" maxlength="500"
+                     x-model="linkUrl" :placeholder="$t('home.link.placeholder')" :disabled="locked || linkBusy">
+              <button type="submit" class="link__btn" :disabled="locked || linkBusy || !linkUrl.trim()"
+                      x-text="linkBusy ? $t('home.link.adding') : $t('home.link.add')"></button>
+            </form>
 
             <div class="drop-slot__options">
               <div class="opt">
@@ -901,6 +909,45 @@
         <div class="field">
           <span class="field__label" id="set-lang" x-text="$t('home.opt.language')"></span>
           <div x-segmented="{ labelledby: 'set-lang', options: $segOptions('language'), value: defaultLanguage, onChange: (v) => setDefaults('defaults', { default_language: v }) }"></div>
+        </div>
+      </section>
+
+      <!-- YouTube links: optional, off by default -->
+      <section class="dset" id="set-links" aria-labelledby="h-links">
+        <div class="dset__head">
+          <h3 class="dset__title" id="h-links" x-text="$t('set.links.title')"></h3>
+          <p class="fstate" :class="'is-' + sec.links.state" role="status" aria-live="polite">
+            <span x-icon="stateIcon('links')" x-show="sec.links.state !== 'idle'"></span>
+            <span x-text="stateText('links')"></span>
+            <button type="button" class="fstate__retry" x-show="sec.links.state === 'error'" @click="retry('links')" x-text="$t('set.retry')"></button>
+          </p>
+        </div>
+        <p class="dhint dhint--top" x-text="$t('set.links.hint')"></p>
+
+        <div class="choices">
+          <label class="choice" :class="{ 'is-on': youtubeLinks }">
+            <input type="checkbox" id="set-links-on" :checked="youtubeLinks" @change="setLinks($event.target.checked)">
+            <span class="choice__text">
+              <span class="choice__name" x-text="$t('set.links.toggle')"></span>
+              <span class="choice__desc" x-text="$t('set.links.toggle.desc')"></span>
+            </span>
+          </label>
+        </div>
+
+        <!-- Turned on: the downloader is a small install on request, and the same button updates it. -->
+        <div class="nemo__setup" x-show="youtubeLinks" x-cloak>
+          <p class="dnote" :class="{ 'dnote--plain': ytReady && !ytInstalling }">
+            <span x-icon="ytInstalling ? 'loader' : ytReady ? 'check' : 'alert-triangle'"></span>
+            <span x-text="ytStatusText"></span>
+          </p>
+          <div class="bar" x-show="ytInstalling" role="progressbar" :aria-label="$t('set.links.installing')">
+            <div class="bar__fill" style="width: 100%"></div>
+          </div>
+          <button type="button" class="btn" :class="{ 'btn--solid': !ytReady }" x-show="!ytInstalling" @click="installYt()">
+            <span x-icon="ytReady ? 'refresh-cw' : 'download'"></span>
+            <span x-text="ytReady ? $t('set.links.update') : $t('set.links.install')"></span>
+          </button>
+          <p class="dhint" x-show="ytReady && !ytInstalling" x-text="$t('set.links.update.hint')"></p>
         </div>
       </section>
 

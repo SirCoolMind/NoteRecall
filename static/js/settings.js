@@ -4,7 +4,7 @@
 
 import { SPEAKER_CHOICES } from "./segmented.js";
 
-const SECTIONS = ["engine", "device", "defaults", "speakers", "spkmodel", "interface"];
+const SECTIONS = ["engine", "device", "defaults", "links", "speakers", "spkmodel", "interface"];
 const NEMO_STEPS = ["nemo_toolkit", "nemotron_model"];
 const SAVED_VISIBLE_MS = 2500;
 const TEXT_DEBOUNCE_MS = 700;
@@ -31,6 +31,7 @@ export function registerSettings(Alpine) {
     defaultSpeakers: "0",
     diarizer: "standard",   // speaker model: "standard" | "nemotron" (experimental)
     nemoConfirm: false,     // the soft-gate warning is open, waiting for "Use anyway"
+    youtubeLinks: false,    // optional: Home also takes a YouTube link
     speakerChoices: SPEAKER_CHOICES,
     hasKey: false,
     keyTail: "",
@@ -81,6 +82,7 @@ export function registerSettings(Alpine) {
       const n = Number(cfg.default_speakers);
       this.defaultSpeakers = this.speakerChoices.includes(n) ? String(n) : "0";
       this.diarizer = cfg.diarizer === "nemotron" ? "nemotron" : "standard";
+      this.youtubeLinks = cfg.youtube_links === true;
       this.noteKey(cfg);
     },
 
@@ -302,6 +304,23 @@ export function registerSettings(Alpine) {
       const missing = NEMO_STEPS.filter((id) => !(this.nemoCheck(id) || {}).ok);
       return Alpine.store("setup").start(missing.length ? missing : NEMO_STEPS);
     },
+
+    // ---------------------------------------------------------------- YouTube links (optional, off by default)
+    setLinks(on) {
+      this.youtubeLinks = on;
+      window.dispatchEvent(new CustomEvent("settings-links", { detail: { on } }));   // Home shows or hides the field at once
+      this.send("links", { youtube_links: on }).then(() => this.refreshSoon());
+    },
+    get ytCheck() { return this.nemoCheck("yt_dlp"); },
+    get ytReady() { return !!(this.ytCheck || {}).ok; },
+    get ytInstalling() { return ["pending", "running"].includes((this.nemoItem("yt_dlp") || {}).state); },
+    get ytStatusText() {
+      if (this.ytInstalling) return this.t("set.links.installing");
+      const it = this.nemoItem("yt_dlp");
+      if (it && it.state === "failed") return this.t("set.links.failed", { reason: it.message });
+      return this.ytReady ? this.t("set.links.ready", { version: this.ytCheck.detail }) : this.t("set.links.missing");
+    },
+    installYt() { return Alpine.store("setup").start(["yt_dlp"]); },
 
     // ---------------------------------------------------------------- defaults for new recordings
     setDefaults(section, patch) {

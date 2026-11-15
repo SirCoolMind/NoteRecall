@@ -26,6 +26,7 @@ import timing
 import engines
 import ffmpeg_tools
 import installer as installer_mod
+import linkfetch
 import nemo_diar
 import pipeline
 import search as search_mod
@@ -155,6 +156,28 @@ def _note_diarizer(meta: dict, result: dict):
         meta.pop("diarizer_fallback", None)
 
 
+def _has_audio(d: Path, meta: dict) -> bool:
+    name = meta.get("audio_file")
+    return bool(name) and (d / name).is_file()
+
+
+DOWNLOAD_SHARE = 4   # a link's download fills 0..4 %, just under "converting"
+
+
+def _fetch_link(mid: str, d: Path, meta: dict, status):
+    """Download a link meeting's audio (worker thread). Raises linkfetch.LinkError."""
+    status("downloading", 0)
+    got = linkfetch.fetch(meta["source_url"], d,
+                          lambda f: status("downloading", f * DOWNLOAD_SHARE))
+    meta["audio_file"] = got["file"]
+    with meta_lock(mid):
+        merge_user_fields(mid, meta)
+        # the video's own title, unless the user typed one or renamed it meanwhile
+        if got["title"] and meta.get("title") == linkfetch.PLACEHOLDER_TITLE:
+            meta["title"] = got["title"]
+        _write_meta_unlocked(mid, meta)
+
+
 def worker():
     while True:
         kind, mid, arg = jobs.get()
@@ -169,11 +192,12 @@ def worker():
             progress = round(progress)
             changed = (meta.get("status") != stage or meta.get("progress") != progress)
             meta["status"], meta["progress"] = stage, progress
-            live_status[mid] = {"stage": stage, "progress": progress}
             if changed:  # progress callbacks fire very often; only hit disk on change
                 with meta_lock(mid):
                     merge_user_fields(mid, meta)
                     _write_meta_unlocked(mid, meta)
+            # after the file: a reader that sees "error" here must also find the reason on disk
+            live_status[mid] = {"stage": stage, "progress": progress}
 
         def line(seg):
             live_lines.setdefault(mid, []).append(
@@ -197,6 +221,8 @@ def worker():
                     meta["speaker_names"] = {}
                     _write_meta_unlocked(mid, meta)
             else:
+                if meta.get("source_url") and not _has_audio(d, meta):
+                    _fetch_link(mid, d, meta, status)
                 result = pipeline.run_job(
                     d / meta["audio_file"], d,
                     meta.get("language") or None,
@@ -227,12 +253,18 @@ def worker():
             (d / "summary.md").write_text(summary, encoding="utf-8")
             meta["summary_engine"] = engine
             meta.pop("error", None)
+            meta.pop("error_code", None)
             live_lines.pop(mid, None)   # before "done" is visible: the real transcript takes over
             status("done", 100)
         except Exception as e:
             import traceback
             traceback.print_exc()
             meta["error"] = str(e)
+            # link failures carry a code the screens translate; anything else clears it
+            if isinstance(e, linkfetch.LinkError):
+                meta["error_code"] = "link_" + e.code
+            else:
+                meta.pop("error_code", None)
             live_lines.pop(mid, None)
             status("error", 0)
         finally:
@@ -295,7 +327,18 @@ app.router.lifespan_context = lifespan
 # ---------------------------------------------------------------- api
 
 # Vendored CSS, JS, fonts, icons and i18n dictionaries (no CDN, works offline).
-app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+class FreshStatic(StaticFiles):
+    """Static files the browser must re-check every time (a cheap 304 when unchanged).
+    Without this a browser keeps old scripts for a while after an update and runs
+    them against the new page."""
+
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "no-cache"
+        return response
+
+
+app.mount("/static", FreshStatic(directory=BASE_DIR / "static"), name="static")
 
 
 @app.get("/",response_class=HTMLResponse)
@@ -356,6 +399,8 @@ def set_config(body: dict):
         allowed["whisper_model"] = body["whisper_model"]
     if body.get("diarizer") in ("standard", "nemotron"):
         allowed["diarizer"] = body["diarizer"]
+    if isinstance(body.get("youtube_links"), bool):
+        allowed["youtube_links"] = body["youtube_links"]
     if body.get("default_language") in ("", "ms", "en"):
         allowed["default_language"] = body["default_language"]
     n = body.get("default_speakers")
@@ -504,6 +549,10 @@ def _fixes(cfg: dict) -> dict:
                        "cmd": f"{LNX_PIP} install torch --index-url {installer_mod.TORCH_CUDA_INDEX}"},
                       {"do": "Then", "cmd": f"{LNX_PIP} install -r requirements-nemo.txt"}],
         },
+        "yt_dlp": {
+            "windows": [{"do": "Install or update the YouTube downloader", "cmd": f"{WIN_PIP} install -U yt-dlp"}],
+            "linux": [{"do": "Install or update the YouTube downloader", "cmd": f"{LNX_PIP} install -U yt-dlp"}],
+        },
         "nemotron_model": {
             "windows": [{"do": "Download the Nemotron-3 speaker model into models\\nemotron-3-diarization",
                          "cmd": f'{WIN_PY} -c "from huggingface_hub import hf_hub_download; '
@@ -608,6 +657,12 @@ def _evaluate(cfg: dict) -> dict:
     add("nemotron_model", "Nemotron-3 speaker model", nemo_diar.model_present(),
         nemo_diar.MODEL_FILENAME if nemo_diar.model_present() else "not downloaded",
         req="optional")
+
+    # Optional YouTube links. Same rule as Nemotron: never "required".
+    yt_ok = linkfetch.available()
+    add("yt_dlp", "YouTube downloader (yt-dlp)", yt_ok,
+        (linkfetch.version() or "installed") if yt_ok else "not installed",
+        "Optional: only needed for the YouTube links setting", req="optional")
 
     om = summarizer.ollama_model()
     add("ollama", "Ollama (better summaries)", om, om or "not running",
@@ -778,6 +833,42 @@ async def upload(file: UploadFile = File(...), title: str = Form(""),
     return {"id": mid}
 
 
+@app.post("/api/meetings/link")
+def add_link(body: dict):
+    """A meeting from a YouTube link: {url, title?, language?, num_speakers?}.
+    Only when the "YouTube links" setting is on. The download itself runs in the
+    worker, so this returns at once and the row shows the progress.
+    Refusals carry a code in `detail`: link_off (403), link_bad_link (400), link_not_installed (409)."""
+    if not config.load().get("youtube_links"):
+        raise HTTPException(403, "link_off")
+    url = linkfetch.video_url(body.get("url"))
+    if not url:
+        raise HTTPException(400, "link_bad_link")
+    if not linkfetch.available():
+        raise HTTPException(409, "link_not_installed")
+    title = body.get("title") if isinstance(body.get("title"), str) else ""
+    language = body.get("language")
+    n = body.get("num_speakers")
+    n = n if isinstance(n, int) and not isinstance(n, bool) and n > 0 else 0
+    mid = datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:6]
+    (DATA_DIR / mid).mkdir()
+    meta = {
+        "id": mid,
+        "title": title.strip() or linkfetch.PLACEHOLDER_TITLE,
+        "created": datetime.now().isoformat(timespec="seconds"),
+        "audio_file": "",
+        "source_url": url,
+        "language": language if language in ("ms", "en") else "",
+        "num_speakers": n,
+        "status": "queued", "progress": 0,
+        "speaker_names": {},
+        "engine": config.load()["engine"],
+    }
+    write_meta(mid, meta)
+    jobs.put(("full", mid, None))
+    return {"id": mid}
+
+
 def _quick_summary(d: Path) -> str:
     """The gist shown on a schedule row; empty when there is no (readable) summary.md."""
     try:
@@ -856,6 +947,8 @@ def known_speaker_names() -> list[str]:
 @app.get("/api/meetings/{mid}/audio")
 def get_audio(mid: str):
     meta = read_meta(mid)
+    if not _has_audio(DATA_DIR / mid, meta):   # a link that has not downloaded yet
+        raise HTTPException(404, "no audio yet")
     return FileResponse(DATA_DIR / mid / meta["audio_file"])
 
 

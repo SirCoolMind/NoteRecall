@@ -105,6 +105,24 @@
 .plate-btn:hover { opacity: 0.88; }
 .plate-btn:focus-visible { outline-color: var(--focus); box-shadow: 0 0 0 2px var(--action), 0 0 0 5px var(--on-action); }
 
+/* Optional YouTube link (Settings -> General turns it on): one quiet line under the button, outlined like the segmented groups. */
+.link { display: flex; flex-wrap: wrap; gap: var(--sp-2); width: 100%; max-width: 560px; cursor: auto; }
+.link__input {
+  flex: 1 1 15rem; min-width: 0; box-sizing: border-box; min-height: var(--target); padding: 0 var(--sp-3);
+  background: transparent; color: var(--on-action); border: 1px solid var(--on-action); border-radius: var(--r-control);
+  font: 400 var(--fs-body)/1.2 var(--font-body);
+}
+.link__input::placeholder { color: var(--on-action); opacity: 0.85; }
+.link__btn {
+  flex: none; min-height: var(--target); padding: 0 var(--sp-4); cursor: pointer; white-space: nowrap;
+  background: transparent; color: var(--on-action); border: 1px solid var(--on-action); border-radius: var(--r-control);
+  font: 700 var(--fs-body)/1 var(--font-slot); letter-spacing: 0.02em;
+}
+.link__btn:hover:not(:disabled) { background: color-mix(in srgb, var(--on-action) 16%, transparent); }
+.link__btn:disabled { opacity: 0.6; cursor: default; }
+.link__input:focus-visible, .link__btn:focus-visible { outline-color: var(--focus); }
+.drop-slot.is-locked .link__input, .drop-slot.is-locked .link__btn { border-color: var(--rule-strong); color: var(--ink-2); cursor: not-allowed; }
+
 /* Language and speakers: segmented radio groups on the plate; one click, no list. */
 .drop-slot__options { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3) var(--sp-6); font-size: var(--fs-body); }
 .opt { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2) var(--sp-3); min-width: 0; }

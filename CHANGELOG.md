@@ -21,10 +21,19 @@ Not in a numbered version yet.
 - **Read while it works.** With the local engine, the transcript appears line
   by line while the recording is still being processed. The browser tab shows
   the percentage.
+- **YouTube links (optional, off by default).** Turn it on in **Settings →
+  General → YouTube links** and the first page gets one extra field: paste a
+  link to a YouTube video and NoteRecall downloads its audio and transcribes
+  it like any recording. Turning it on offers a small one-click install of
+  the downloader (about 3 MB); the same button updates it when YouTube
+  changes. This needs internet. With the setting off, nothing looks or works
+  differently.
 - Names you have already given to speakers are suggested when you rename a
   speaker in another meeting.
 - Fixed: a few words could be shown as lasting several minutes, which painted
   the speaker ribbon wrongly and inflated that speaker's talk time.
+- Fixed: after an update, a browser could keep running old scripts for a
+  while. Pages now always check for the current ones.
 - Fixed: a stray scrollbar on the Transcript / Summary tabs, and the Back
   button overlapping the language switch on a phone.
 

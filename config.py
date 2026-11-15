@@ -14,6 +14,7 @@ DEFAULTS = {
     "default_language": "",     # upload default: "" = Auto, "ms" or "en"
     "default_speakers": 0,      # upload default: 0 = Auto, otherwise the speaker count
     "diarizer": "standard",     # "standard" (sherpa-onnx) or "nemotron" (experimental, see nemo_diar.py)
+    "youtube_links": False,     # optional: add a recording from a YouTube link (see linkfetch.py)
 }
 
 

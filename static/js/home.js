@@ -113,6 +113,11 @@ export function registerHome(Alpine) {
     uploading: null,    // { name, percent } while a file is on its way
     uploadNote: null,   // { kind: "ok" | "error", text } shown inside the slot
 
+    // optional: a YouTube link instead of a file. Only shown when Settings turns it on.
+    links: false,
+    linkUrl: "",
+    linkBusy: false,
+
     // schedule toolbar (restored per tab from sessionStorage)
     query: "",
     status: "all",
@@ -246,6 +251,7 @@ export function registerHome(Alpine) {
         if (!res.ok) return;
         const cfg = await res.json();
         this.applyDefaults({ language: cfg.default_language, speakers: cfg.default_speakers });
+        this.links = cfg.youtube_links === true;
       } catch (e) { /* keep Auto */ }
     },
 
@@ -260,7 +266,7 @@ export function registerHome(Alpine) {
     openPicker() { this.$refs.picker.click(); },
     onSlotClick(e) {
       if (this.locked) return;
-      if (e.target.closest("button, select, label, input, a, .opt")) return;
+      if (e.target.closest("button, select, label, input, a, .opt, .link")) return;
       this.openPicker();
     },
     onPick(e) {
@@ -311,6 +317,36 @@ export function registerHome(Alpine) {
         }
       }
       this.uploading = null;
+    },
+
+    // ---------------------------------------------------------------- YouTube link (optional)
+    async addLink() {
+      const url = this.linkUrl.trim();
+      if (!url || this.linkBusy || this.locked) return;
+      this.linkBusy = true;
+      let note;
+      try {
+        const res = await fetch("/api/meetings/link", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url, language: this.language, num_speakers: Number(this.speakers) || 0 }),
+        });
+        if (res.ok) {
+          this.linkUrl = "";
+          note = { kind: "ok", text: this.t("home.link.added") };
+          await this.refresh();
+        } else {
+          let code = "";
+          try { code = (await res.json()).detail; } catch (e) { /* not JSON */ }
+          const key = "home.link.err." + code;
+          const known = typeof code === "string" && this.t(key) !== key;
+          note = { kind: "error", text: known ? this.t(key) : this.t("home.link.failed", { reason: String(res.status) }) };
+        }
+      } catch (e) {
+        note = { kind: "error", text: this.t("home.link.failed", { reason: this.t("home.upload.network") }) };
+      }
+      this.linkBusy = false;
+      this.uploadNote = note;
+      this.announcement = note.text;
     },
 
     // ---------------------------------------------------------------- schedule
@@ -432,7 +468,11 @@ export function registerHome(Alpine) {
       if (mins === null) return this.t("eta.estimating");
       return mins === 0 ? this.t("eta.lt1") : this.t("eta.min", { n: mins });
     },
-    errorText(m) { return m.error || this.t("row.error_unknown"); },
+    errorText(m) {
+      const key = m.error_code ? "error." + m.error_code : "";   // link failures come with a code to translate
+      const text = key ? this.t(key) : "";
+      return text && text !== key ? text : m.error || this.t("row.error_unknown");
+    },
 
     openMeeting(m) { location.hash = `#/m/${m.id}`; },
     onRowClick(m, e) {
