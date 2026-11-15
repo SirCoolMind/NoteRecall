@@ -406,7 +406,7 @@
   "upd.state.done": "Done",
   "upd.state.failed": "Failed",
   "set.spk.nemo": "Nemotron-3 (experimental)",
-  "set.spk.nemo.desc": "NVIDIA's Nemotron-3-Diarization model. Up to 8 speakers, best on an NVIDIA graphics card. Malay was not in its training data. Needs an extra ~3 GB install. If it fails on a meeting, Standard is used instead.",
+  "set.spk.nemo.desc": "NVIDIA's Nemotron-3-Diarization model, up to 8 speakers, best on an NVIDIA graphics card. It does not add Malay: it was trained without Malay, so on Malay meetings Standard may do as well or better. Malay and English transcripts work with either model. Optional extra install of about 3 GB. If it fails on a meeting, Standard is used instead.",
   "set.spk.nemo.gate.no_gpu": "No NVIDIA graphics card found. Nemotron-3 will run on the processor, which may be very slow or fail. If it fails, NoteRecall uses Standard for that meeting.",
   "set.spk.nemo.gate.low_vram": "Your graphics card has {gb} GB of memory; 4 GB or more is recommended. Nemotron-3 may be slow or fail. If it fails, NoteRecall uses Standard for that meeting.",
   "set.spk.nemo.gate.old_driver": "Your NVIDIA driver is older than version 580, so Nemotron-3 would run on the processor. Update the graphics driver for full speed. If it fails, NoteRecall uses Standard for that meeting.",

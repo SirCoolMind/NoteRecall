@@ -90,7 +90,11 @@ del "models\nemo_en_titanet_large.onnx" >nul 2>&1
 del "models\seg.tar.bz2" >nul 2>&1
 :models_done
 
-REM 4. start the server; open the browser once it responds (only the first time:
+REM 4. a free port: PORT (8756), or the next one up when something already uses it
+for /f "delims=" %%p in ('%PY% port.py') do set "PORT=%%p"
+set "URL=http://%HOST%:%PORT%"
+
+REM start the server; open the browser once it responds (only the first time:
 REM after an in-app update the server exits with code 75 and comes back in this same tab)
 if defined RESTARTED goto run_server
 start "" /min powershell -NoProfile -WindowStyle Hidden -Command "$u='%URL%/api/status'; for($i=0;$i -lt 300;$i++){ try{ Invoke-WebRequest $u -UseBasicParsing -TimeoutSec 2 | Out-Null; Start-Process '%URL%'; break }catch{ Start-Sleep 1 } }"

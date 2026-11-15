@@ -279,7 +279,7 @@ touched by `git pull`.
 | `curl: command not found` (Linux) | Run `sudo apt install -y curl`, then start again. |
 | Browser says **"This site can't be reached"** | NoteRecall isn't running yet, or its window was closed. Start it again and wait for `[4/4] Starting NoteRecall`. |
 | Download stopped halfway on first start | Just start again. It continues from where it stopped. |
-| Port **8756 already in use** | NoteRecall is probably already running in another window. Use that one, or close it first. |
+| Opens at **8757** (or higher) instead of 8756 | Something else was already using port 8756, so NoteRecall took the next free one; the start window shows the address. Usually it is NoteRecall itself, still running in another window: use one copy only, since both work on the same meetings. |
 | It is very slow | That's normal without an NVIDIA graphics card: about 25 minutes per hour of audio. You can keep using the computer, and you can close the browser tab — the work continues as long as the black/Terminal window is open. |
 | Too many speakers detected | Open the meeting → **Re-detect with a fixed number** and choose how many people actually spoke. Or try the optional [Nemotron-3 speaker model](#optional-nemotron-3-speaker-detection-experimental). |
 | Meeting says Nemotron-3 **could not be used** | NoteRecall fell back to the Standard speaker detection for that meeting by itself; the notice says why. Fix the cause (often: other programs using the graphics card) and press **Re-detect speakers**. |

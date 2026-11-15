@@ -44,6 +44,30 @@ _whisper_key = None  # (model_name, device) the cache was loaded with
 _CUDA_LIBS = ("cuda_runtime", "cublas", "cudnn", "nvjitlink", "cufft", "curand")
 
 
+def _preload_sherpa_ort():
+    """Windows: load sherpa-onnx's own onnxruntime_providers_shared.dll first.
+
+    faster-whisper's voice filter (Silero VAD) uses the separate pip onnxruntime,
+    which ships a DLL with the same name. Windows reuses a DLL already loaded by
+    name, so once Whisper has run, sherpa's CUDA provider binds to the wrong
+    copy and fails ("Error 1114 ... Failed to load shared library"), dropping
+    speaker detection to the CPU. Loading sherpa's copy first fixes both: the
+    pip onnxruntime still works with it."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        import importlib.util
+        spec = importlib.util.find_spec("sherpa_onnx")
+        if spec is None or not spec.origin:
+            return
+        libdir = Path(spec.origin).parent / "lib"
+        if (libdir / "onnxruntime_providers_cuda.dll").exists():   # CUDA build only
+            ctypes.WinDLL(str(libdir / "onnxruntime_providers_shared.dll"))
+    except Exception as e:
+        print(f"[pipeline] sherpa-onnx preload skipped: {e}", flush=True)
+
+
 def _setup_cuda_dlls():
     """Make the pip-installed CUDA libraries visible to ctranslate2 / onnxruntime.
 
@@ -52,6 +76,7 @@ def _setup_cuda_dlls():
         on Linux, so this must never run there).
       * Linux: the dynamic loader reads LD_LIBRARY_PATH at process start, so
         setting it now would be ignored — preload the .so files instead."""
+    _preload_sherpa_ort()
     try:
         import sysconfig
         nvidia = Path(sysconfig.get_paths()["purelib"]) / "nvidia"

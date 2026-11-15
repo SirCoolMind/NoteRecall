@@ -406,7 +406,7 @@
   "upd.state.done": "Siap",
   "upd.state.failed": "Gagal",
   "set.spk.nemo": "Nemotron-3 (percubaan)",
-  "set.spk.nemo.desc": "Model Nemotron-3-Diarization daripada NVIDIA. Sehingga 8 penutur, paling baik dengan kad grafik NVIDIA. Bahasa Melayu tiada dalam data latihannya. Perlu pemasangan tambahan ~3 GB. Jika gagal pada sesuatu mesyuarat, Standard digunakan.",
+  "set.spk.nemo.desc": "Model Nemotron-3-Diarization daripada NVIDIA, sehingga 8 penutur, paling baik dengan kad grafik NVIDIA. Ia tidak menambah sokongan Bahasa Melayu: ia dilatih tanpa Bahasa Melayu, jadi untuk mesyuarat dalam Bahasa Melayu, Standard mungkin sama baik atau lebih baik. Transkrip Bahasa Melayu dan Inggeris berfungsi dengan kedua-dua model. Pemasangan tambahan pilihan, kira-kira 3 GB. Jika gagal pada sesuatu mesyuarat, Standard digunakan.",
   "set.spk.nemo.gate.no_gpu": "Tiada kad grafik NVIDIA ditemui. Nemotron-3 akan berjalan pada pemproses, yang mungkin sangat perlahan atau gagal. Jika gagal, NoteRecall menggunakan Standard untuk mesyuarat itu.",
   "set.spk.nemo.gate.low_vram": "Kad grafik anda mempunyai memori {gb} GB; 4 GB atau lebih disyorkan. Nemotron-3 mungkin perlahan atau gagal. Jika gagal, NoteRecall menggunakan Standard untuk mesyuarat itu.",
   "set.spk.nemo.gate.old_driver": "Pemacu NVIDIA anda lebih lama daripada versi 580, jadi Nemotron-3 akan berjalan pada pemproses. Kemas kini pemacu grafik untuk kelajuan penuh. Jika gagal, NoteRecall menggunakan Standard untuk mesyuarat itu.",

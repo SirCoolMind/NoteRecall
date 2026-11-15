@@ -3,6 +3,7 @@
 Run:  .venv\\Scripts\\python.exe server.py   then open http://localhost:8756
 """
 
+import asyncio
 import json
 import os
 import queue
@@ -234,8 +235,18 @@ def start_background():
         requeue_unfinished()
 
 
+def _quiet_connection_resets(loop, context):
+    """Windows: a browser tab closing or reloading mid-request makes asyncio print
+    a ConnectionResetError traceback (WinError 10054). It is harmless; drop it."""
+    if isinstance(context.get("exception"), ConnectionResetError):
+        return
+    loop.default_exception_handler(context)
+
+
 @asynccontextmanager
 async def lifespan(_app):
+    pipeline._preload_sherpa_ort()   # before anything loads the pip onnxruntime
+    asyncio.get_running_loop().set_exception_handler(_quiet_connection_resets)
     start_background()
     yield
 
@@ -874,7 +885,11 @@ def export(mid: str, format: str = "txt"):
 
 if __name__ == "__main__":
     # HOST=0.0.0.0 to expose it on a LAN / Linux server
+    import port as port_mod
     host = os.environ.get("HOST", "127.0.0.1")
-    port = int(os.environ.get("PORT", "8756"))
+    wanted = int(os.environ.get("PORT") or port_mod.DEFAULT_PORT)
+    port = port_mod.pick(host, wanted)   # taken (another program, or NoteRecall already running)? next one up
+    if port != wanted:
+        print(f"Port {wanted} is in use; using {port} instead.")
     print(f"NoteRecall -> http://{host}:{port}")
     uvicorn.run(app, host=host, port=port, log_level="warning")
