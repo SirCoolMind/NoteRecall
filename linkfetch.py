@@ -23,7 +23,7 @@ _PATH_KINDS = ("shorts", "live", "embed", "v")
 
 
 class LinkError(Exception):
-    """code: bad_link | not_installed | unavailable | live | too_long | network | failed."""
+    """code: bad_link | not_installed | unavailable | blocked | live | too_long | network | failed."""
 
     def __init__(self, code: str, detail: str = ""):
         super().__init__(detail or code)
@@ -88,8 +88,16 @@ _NETWORK = ("getaddrinfo", "timed out", "connection", "network is unreachable",
             "temporary failure in name resolution", "urlopen error", "ssl")
 
 
+# YouTube refusing this connection, not this video: it answers every link the same way
+# for a while ("Sign in to confirm you're not a bot", HTTP 429). Checked first, because
+# the same text also says "sign in".
+_BLOCKED = ("not a bot", "429", "too many requests")
+
+
 def _code_for(message: str) -> str:
     low = message.lower()
+    if any(s in low for s in _BLOCKED):
+        return "blocked"
     if any(s in low for s in _UNAVAILABLE):
         return "unavailable"
     if any(s in low for s in _NETWORK):

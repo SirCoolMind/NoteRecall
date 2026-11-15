@@ -238,7 +238,7 @@ fastest setting and the one that keeps the machine usable during a job.
   downloaded the audio into the same folder. The download is the only network
   traffic: a request to YouTube for that one video. Nothing of the user's is
   sent. A failed download is a failed meeting with an `error_code`
-  (`link_unavailable`, `link_live`, `link_too_long`, `link_network`,
+  (`link_unavailable`, `link_blocked`, `link_live`, `link_too_long`, `link_network`,
   `link_failed`) that the screens translate; **Try again** downloads again.
 - Models cache in `models/` (diarization, ~165 MB) and the HuggingFace cache
   (Whisper, ~3 GB) — `~/.cache/huggingface` unless `HF_HOME` says otherwise.
@@ -350,7 +350,10 @@ fastest setting and the one that keeps the machine usable during a job.
     that fetching from YouTube without a JavaScript runtime (Deno) is
     deprecated and that some formats may be missing; the m4a audio track still
     downloaded in the test here, but that may stop one day and NoteRecall does
-    not install Deno. Public, finished videos up to 6 hours only: no live
+    not install Deno. YouTube also sometimes refuses a whole internet
+    connection for a while ("confirm you're not a bot", HTTP 429): then every
+    link fails until YouTube lifts it, and updating does not help. NoteRecall
+    does not use your YouTube login to get around that. Public, finished videos up to 6 hours only: no live
     streams, playlists, private or age-restricted videos. The download runs in
     the single worker, so it waits its turn like any job.
 

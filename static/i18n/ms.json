@@ -502,6 +502,7 @@
   "home.link.err.link_off": "Pautan YouTube dimatikan dalam Tetapan.",
   "stage.downloading": "Memuat turun dari YouTube",
   "error.link_unavailable": "YouTube tidak memberikan video ini. Mungkin ia peribadi, telah dipadam, terhad umur atau disekat di negara anda.",
+  "error.link_blocked": "YouTube sedang menolak muat turun daripada sambungan internet ini: ia meminta pengesahan bahawa anda bukan bot. Ini bukan masalah video ini; setiap pautan mendapat jawapan yang sama. Tunggu beberapa jam atau guna rangkaian lain, kemudian cuba lagi.",
   "error.link_live": "Ini siaran langsung. Cuba lagi selepas siaran tamat.",
   "error.link_too_long": "Video ini lebih panjang daripada 6 jam, melebihi had yang NoteRecall terima daripada pautan.",
   "error.link_network": "YouTube tidak dapat dihubungi. Semak sambungan internet, kemudian cuba lagi.",

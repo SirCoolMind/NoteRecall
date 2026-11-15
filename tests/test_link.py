@@ -82,6 +82,8 @@ def test_failure_messages_sort_into_codes():
     assert linkfetch._code_for("ERROR: [youtube] abc: Private video. Sign in if you've been granted access") == "unavailable"
     assert linkfetch._code_for("ERROR: [youtube] abc: Video unavailable") == "unavailable"
     assert linkfetch._code_for("ERROR: [youtube] abc: This video is unavailable") == "unavailable"
+    assert linkfetch._code_for("ERROR: [youtube] abc: Sign in to confirm you’re not a bot. Use --cookies") == "blocked"
+    assert linkfetch._code_for("Unable to download webpage: HTTP Error 429: Too Many Requests") == "blocked"
     assert linkfetch._code_for("<urlopen error [Errno 11001] getaddrinfo failed>") == "network"
     assert linkfetch._code_for("ERROR: unable to extract player response") == "failed"
 
@@ -188,7 +190,7 @@ def test_download_progress_stays_under_the_first_pipeline_stage(client, links_on
     assert server.DOWNLOAD_SHARE < 5
 
 
-@pytest.mark.parametrize("code", ["unavailable", "live", "too_long", "network", "failed"])
+@pytest.mark.parametrize("code", ["unavailable", "blocked", "live", "too_long", "network", "failed"])
 def test_failed_download_is_a_failed_meeting_with_a_code(client, links_on, fake_fetch, code):
     fake_fetch.error = linkfetch.LinkError(code, "raw downloader text")
     mid = add(client).json()["id"]

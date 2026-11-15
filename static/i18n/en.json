@@ -502,6 +502,7 @@
   "home.link.err.link_off": "YouTube links are turned off in Settings.",
   "stage.downloading": "Downloading from YouTube",
   "error.link_unavailable": "YouTube would not give this video. It may be private, removed, age-restricted or blocked in your country.",
+  "error.link_blocked": "YouTube is refusing downloads from this internet connection right now: it is asking to confirm you are not a bot. It is not this video; every link gets the same answer. Wait a few hours or use another network, then try again.",
   "error.link_live": "This is a live stream. Try again once the stream has ended.",
   "error.link_too_long": "This video is longer than 6 hours, which is more than NoteRecall accepts from a link.",
   "error.link_network": "YouTube could not be reached. Check the internet connection, then try again.",
