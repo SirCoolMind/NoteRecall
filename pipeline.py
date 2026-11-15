@@ -11,6 +11,7 @@ from pathlib import Path
 import numpy as np
 
 import ffmpeg_tools
+import timing
 
 BASE_DIR = Path(__file__).parent
 MODELS_DIR = BASE_DIR / "models"
@@ -162,8 +163,11 @@ def load_wav(path: Path) -> np.ndarray:
     return np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768.0
 
 
-def transcribe(audio: np.ndarray, language: str | None, progress_cb=None):
+def transcribe(audio: np.ndarray, language: str | None, progress_cb=None, line_cb=None):
     """Run whisper on 16 kHz mono float32 audio (from load_wav).
+
+    line_cb(segment) is called with each line as Whisper produces it, so the
+    waiting page can show the text before speakers and summary are done.
 
     Takes an array, not a path: a path makes faster-whisper decode through
     PyAV, and its decode_audio breaks on PyAV 19 (dropped `metadata_errors`).
@@ -184,8 +188,13 @@ def transcribe(audio: np.ndarray, language: str | None, progress_cb=None):
         text = seg.text.strip()
         if not text:
             continue
-        out.append({"start": round(seg.start, 2), "end": round(seg.end, 2),
-                    "text": text, "speaker": -1})
+        line = {"start": round(seg.start, 2), "end": round(seg.end, 2),
+                "text": text, "speaker": -1}
+        # Whisper can stretch a short line across a long silence; see timing.py
+        line["end"] = timing.spoken_end(line)
+        out.append(line)
+        if line_cb:
+            line_cb(out[-1])
         if progress_cb:
             progress_cb(min(seg.end / duration, 1.0))
     return out, info.language, duration
@@ -362,7 +371,9 @@ def run_job(audio_path: Path, work_dir: Path, language: str | None,
     audio = load_wav(wav)
     status_cb("transcribing", 5)
     segments, lang, duration = transcribe(
-        audio, language, lambda f: status_cb("transcribing", 5 + f * 60))
+        audio, language, lambda f: status_cb("transcribing", 5 + f * 60),
+        # optional: the server hangs a .line on its callback to show lines live
+        getattr(status_cb, "line", None))
 
     status_cb("diarizing", 66)
     diarizer = None

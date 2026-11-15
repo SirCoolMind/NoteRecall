@@ -8,6 +8,7 @@ import { registerMeeting } from "./meeting.js";
 import { registerSettings } from "./settings.js";
 import { registerSetup } from "./setup.js";
 import { registerUpdates } from "./updates.js";
+import { parseRoute } from "./route.js";
 
 document.addEventListener("alpine:init", () => {
   const Alpine = window.Alpine;
@@ -38,9 +39,14 @@ document.addEventListener("alpine:init", () => {
   Alpine.magic("t", () => (key, vars) => Alpine.store("i18n").t(key, vars));
 
   // Which screen is showing: '#/m/<id>' opens a meeting, anything else is Home.
-  const routeFromHash = () => (location.hash.match(/^#\/m\/([\w-]+)$/) || [])[1] || null;
-  Alpine.store("route", { id: routeFromHash() });
-  window.addEventListener("hashchange", () => { Alpine.store("route").id = routeFromHash(); });
+  // '#/m/<id>?t=754&q=firewall' opens it at that second with the transcript search filled in.
+  Alpine.store("route", { ...parseRoute(location.hash), n: 0 });
+  const routeFromHash = () => parseRoute(location.hash).id;
+  window.addEventListener("hashchange", () => {
+    const route = Alpine.store("route");
+    Object.assign(route, parseRoute(location.hash));
+    route.n++;   // the same meeting at another moment is still a navigation
+  });
 
   registerSetup(Alpine);
   registerUpdates(Alpine);

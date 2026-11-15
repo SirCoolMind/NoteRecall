@@ -441,6 +441,22 @@ The sticky ribbon is the audio player, drawn as an EPG lane grid. A 56px paper t
 ### Schedule Row (signature)
 The recording length in Time type, a Row Title with an inline 44px pencil edit, a meta line with date and time (`17 Sep 2026 · 17:31`), a quick-summary area (small slot-face label "Quick summary", then the gist clamped to two lines, or a muted "Not available yet" so every row has the same shape), and a status pill with, on ready rows, a 44px eye button that opens the meeting. The title of a ready row is its link, stretched over the whole row, and focus draws a 3px amber outline inset around the row. The processing row expands to show its stage, "about N min left" and a 10px striped bar. The stripes drift at 900ms, and the On Now group title carries a pulsing red lamp (1600ms). A failed row is struck through in red and shows its error message and a Retry outline button.
 
+### Listening controls
+Two 44px outline buttons sit between Play and the clock: back 5 seconds (rotate-ccw icon) and playback speed, a tabular Label Small figure ("1.25×") that steps upward on each press and wraps. When the speed is not 1× its stroke goes to 2px ink, so the state is carried by form, not colour. Player keys work anywhere on a meeting page unless the user is typing or a menu, the tabs, the slider or a dialog owns the key; `?` opens a plain dialog that lists them as `kbd` chips (3px radius, paper fill, `rule-strong` stroke, slot face).
+
+### Correcting a transcript
+- **Line menu:** each line ends in a 44px "more" button that appears on hover, focus or while open (always visible on touch widths). It opens a floating menu (8px radius, the popover shadow): Edit text, Restore the original (edited lines only), Delete this line (danger text; a second press on the same item confirms), then "Who said this" as menu radios with speaker swatches, a whole-turn checkbox and "A new speaker".
+- **In-place editor:** the line's text becomes a textarea with a 2px ink stroke in transcript type, on the same measure. Enter saves, Esc cancels, Ctrl+Space plays or pauses. Under it sit Save (the *key* button: a 2px ink outline, never a plate, so The One Plate Rule holds), Cancel and "Play this line".
+- **Edited mark:** a small outlined "edited" chip in Meta type after the text. It is a fact, not a warning, so it never uses On Air red.
+- **Merging speakers:** the Speakers popover's rows gain a merge button. Pressing it turns the list into a chooser ("Merge Speaker 3 into which speaker?"); picking a target shows a one-line confirmation with the number of lines that will move.
+- **Discard and warnings:** discarding corrections and re-transcribing a corrected meeting ask first in the standard dialog, with a danger button.
+
+### Search results on the schedule
+When the search words were spoken in a meeting, its row grows a block under the quick summary: a slot-face label ("Said here 12 times"), up to three moments (time, speaker, the line with the words marked in the same highlight as the in-meeting search) and a link to the rest. Each moment is a 44px link that opens the meeting at that second.
+
+### Reading while it works
+A processing row carries a text link with the eye icon, "Read it as it is transcribed". The waiting page shows the status pill, stage and bar as before, then a heading with a line count and the lines so far in the transcript's own list style (time in the slot face, text in transcript type), without speakers. The page follows the newest line only when the reader has scrolled to the end.
+
 ### Motion
 Motion is quiet and functional. Hover and press changes take 140ms and UI movement 220ms, all on `cubic-bezier(0.16, 1, 0.3, 1)`. The only authored moment is the gliding playhead. Under `prefers-reduced-motion`, the stripes, lamps, spinners and transitions stop.
 

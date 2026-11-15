@@ -177,14 +177,30 @@ showing progress for each item. You can also see this list anytime under
 2. Optional: before dropping, pick the **Language** (Auto / BM / EN) and
    **Speakers** (how many people talked). Setting the real number of speakers
    gives much better results than Auto.
-3. **Wait.** The list shows each stage and roughly how long is left. You can
-   rename the meeting while it works. Expect about 25 minutes per hour of
-   recording on a normal computer (about 13 with an NVIDIA graphics card).
+3. **Wait, or start reading.** The list shows each stage and roughly how long
+   is left, and the browser tab shows the percentage. Click **Read it as it is
+   transcribed** to see the text so far (local engine only; speakers are added
+   at the end). You can rename the meeting while it works. Expect about 25
+   minutes per hour of recording on a normal computer (about 13 with an NVIDIA
+   graphics card).
 4. **Open it** with the eye button when it shows **Ready**. Click a line to
    jump the audio there, click a speaker's name to rename them
    ("Speaker 1" → "Puan Aisyah").
-5. **Download** the transcript as `.txt`, `.md` (with summary) or `.srt`
-   (subtitles).
+5. **Listen faster.** Next to Play there is a button to go back 5 seconds and
+   a speed button (0.75× to 2×). The keyboard works anywhere on the page:
+   **Space** plays or pauses, **←** and **→** move 5 seconds, **[** and **]**
+   change the speed, **/** goes to search, **?** shows all the keys.
+6. **Correct it.** Point at a line and open the **⋯** menu on its right to
+   edit the text, delete the line, or give it (or the whole turn) to another
+   speaker. In **Speakers**, the merge button joins two speakers that are
+   really one person. NoteRecall keeps the transcript as it was first written:
+   a corrected line can be put back from the same menu, and **⋯ → Discard my
+   corrections** at the top of the meeting undoes everything.
+7. **Find it later.** The search box on the first page searches titles,
+   summaries and everything that was said, in every meeting. Click a result to
+   open the meeting at that moment.
+8. **Download** the transcript as `.txt`, `.md` (with summary) or `.srt`
+   (subtitles). Your corrections are included.
 
 If the speakers look wrong (for example 40 speakers in a meeting of 5 people),
 open the meeting and use **Re-detect with a fixed number**. It only redoes the
@@ -430,7 +446,7 @@ All inside the NoteRecall folder unless noted:
 
 | | |
 |---|---|
-| `data/<meeting-id>/` | each meeting: audio, `transcript.json`, `summary.md`, `meta.json`. Deleting a meeting in the app deletes its folder. |
+| `data/<meeting-id>/` | each meeting: audio, `transcript.json`, `summary.md`, `meta.json`, and `transcript.original.json` once you have corrected something. Deleting a meeting in the app deletes its folder. |
 | `models/` | speaker-detection models (~165 MB) |
 | `config.json` | your settings — **and your Gemini API key in plain text**. Never share or upload this file. |
 | `.venv/` | the Python environment the launcher created |
@@ -457,6 +473,9 @@ More CPU threads is *slower*, not faster — the cap of 8 is deliberate, see
 | `nemo_diar.py` | optional Nemotron-3 speaker detection (see `docs/specs/nemotron-diarization.md`) |
 | `engines.py` | cloud engine: chunking, Gemini, timing |
 | `summarizer.py` | Ollama or built-in summaries |
+| `corrections.py` | corrections to a finished transcript, and the kept original |
+| `search.py` | search across every transcript |
+| `timing.py` | the rule that stops a few words from "lasting" minutes |
 | `config.py` | reads and writes `config.json` |
 | `static/` | the web interface (`index.html`, `css/`, `js/`, `i18n/` English + Malay, `fonts/`, `icons/`) |
 | `requirements.txt` / `requirements-gpu.txt` / `requirements-nemo.txt` | Python packages / extra NVIDIA packages / optional Nemotron-3 packages |

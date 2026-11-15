@@ -57,7 +57,13 @@ class FakePipeline:
     def run_job(self, audio_path, work_dir, language, num_speakers, status_cb):
         status_cb("converting", 5)
         status_cb("transcribing", 30)
+        line = getattr(status_cb, "line", None)   # the server shows lines as they come
+        if line:
+            line(dict(CANNED_SEGMENTS[0], speaker=-1))
         self._checkpoint()
+        if line:
+            for s in CANNED_SEGMENTS[1:]:
+                line(dict(s, speaker=-1))
         status_cb("transcribing", 60)
         status_cb("diarizing", 80)
         status_cb("summarizing", 95)

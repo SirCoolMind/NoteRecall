@@ -21,11 +21,14 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse, Red
 from fastapi.staticfiles import StaticFiles
 
 import config
+import corrections
+import timing
 import engines
 import ffmpeg_tools
 import installer as installer_mod
 import nemo_diar
 import pipeline
+import search as search_mod
 import summarizer
 import updater as updater_mod
 from version import __version__
@@ -37,6 +40,9 @@ DATA_DIR.mkdir(exist_ok=True)
 app = FastAPI(title="NoteRecall")
 jobs: "queue.Queue[str]" = queue.Queue()
 live_status: dict[str, dict] = {}  # id -> {stage, progress}
+# id -> lines transcribed so far in the running job. Memory only: nothing is
+# written until the job finishes, so an interrupted job leaves no half transcript.
+live_lines: dict[str, list] = {}
 
 
 # ---------------------------------------------------------------- storage
@@ -104,6 +110,27 @@ def _write_meta_unlocked(mid: str, meta: dict):
     p.write_text(data, encoding="utf-8")  # last resort, non-atomic
 
 
+def _replace_file(tmp: Path, p: Path, data: str):
+    for _ in range(25):
+        try:
+            os.replace(tmp, p)
+            return
+        except PermissionError:
+            # Windows: replace fails while a reader has the file open
+            time.sleep(0.02)
+    tmp.unlink(missing_ok=True)
+    p.write_text(data, encoding="utf-8")  # last resort, non-atomic
+
+
+def write_transcript(mid: str, segments: list):
+    """Atomic like meta.json, so a reader never sees half a transcript."""
+    p = DATA_DIR / mid / "transcript.json"
+    tmp = p.with_suffix(".json.tmp")
+    data = json.dumps(segments, ensure_ascii=False)
+    tmp.write_text(data, encoding="utf-8")
+    _replace_file(tmp, p, data)
+
+
 def read_transcript(mid: str) -> list[dict]:
     p = meeting_dir(mid) / "transcript.json"
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else []
@@ -148,6 +175,13 @@ def worker():
                     merge_user_fields(mid, meta)
                     _write_meta_unlocked(mid, meta)
 
+        def line(seg):
+            live_lines.setdefault(mid, []).append(
+                {"start": seg.get("start", 0), "text": seg.get("text", "")})
+
+        # run_job only takes the status callback, so the line callback rides on it
+        status.line = line
+
         try:
             t0 = time.time()
             if kind == "rediarize":
@@ -178,9 +212,10 @@ def worker():
                     meta["chunks"] = result["chunks"]
             # clustering returns arbitrary ids; present them as Speaker 1..N
             n_speakers = pipeline.compact_speakers(result["segments"])
-            (d / "transcript.json").write_text(
-                json.dumps(result["segments"], ensure_ascii=False),
-                encoding="utf-8")
+            write_transcript(mid, result["segments"])
+            # a fresh transcript or fresh speakers is the new original
+            corrections.drop_backup(d)
+            meta.pop("summary_stale", None)
             meta.update(
                 num_speakers_found=n_speakers or result["num_speakers"],
                 processing_seconds=round(time.time() - t0),
@@ -192,14 +227,17 @@ def worker():
             (d / "summary.md").write_text(summary, encoding="utf-8")
             meta["summary_engine"] = engine
             meta.pop("error", None)
+            live_lines.pop(mid, None)   # before "done" is visible: the real transcript takes over
             status("done", 100)
         except Exception as e:
             import traceback
             traceback.print_exc()
             meta["error"] = str(e)
+            live_lines.pop(mid, None)
             status("error", 0)
         finally:
             live_status.pop(mid, None)
+            live_lines.pop(mid, None)
             jobs.task_done()
 
 
@@ -762,6 +800,29 @@ def list_meetings():
     return out
 
 
+@app.get("/api/search")
+def search_meetings(q: str = ""):
+    """Everything said in every finished meeting that contains `q` (ignoring
+    case): {query, total, meetings: {id: {total, hits: [{index, start, speaker,
+    text}]}}}. Each meeting carries its first few hits and the full count."""
+    return search_mod.find(DATA_DIR, q)
+
+
+@app.get("/api/meetings/{mid}/live")
+def get_live_lines(mid: str, after: int = 0):
+    """While a recording is being transcribed: the lines produced so far, from
+    line number `after` on. {status, progress, total, lines: [{start, text}]}.
+    Speakers are not known yet. Empty once the job has finished."""
+    meta = read_meta(mid)
+    live = live_status.get(mid)
+    if live:
+        meta.update(status=live["stage"], progress=live["progress"])
+    lines = live_lines.get(mid) or []
+    after = max(0, after)
+    return {"status": meta.get("status"), "progress": meta.get("progress", 0),
+            "total": len(lines), "lines": lines[after:]}
+
+
 @app.get("/api/meetings/{mid}")
 def get_meeting(mid: str):
     meta = read_meta(mid)
@@ -773,7 +834,23 @@ def get_meeting(mid: str):
         "meta": meta,
         "segments": read_transcript(mid),
         "summary": summary_p.read_text(encoding="utf-8") if summary_p.exists() else "",
+        # True while the untouched transcript is kept beside a corrected one
+        "corrected": corrections.has_backup(DATA_DIR / mid),
+        "known_names": known_speaker_names(),
     }
+
+
+def known_speaker_names() -> list[str]:
+    """Every name the user has given a speaker, in any meeting: offered as
+    suggestions when naming a speaker, so a regular is typed once."""
+    names = set()
+    for d in DATA_DIR.iterdir():
+        try:
+            m = json.loads((d / "meta.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        names.update(str(v).strip() for v in (m.get("speaker_names") or {}).values() if str(v).strip())
+    return sorted(names, key=str.casefold)
 
 
 @app.get("/api/meetings/{mid}/audio")
@@ -791,8 +868,129 @@ def patch_meeting(mid: str, body: dict):
         if "speaker_names" in body:
             meta.setdefault("speaker_names", {}).update(
                 {str(k): str(v).strip() for k, v in body["speaker_names"].items() if str(v).strip()})
+            if meta.get("status") == "done":
+                # the built-in summary prints names in its speaking-time list
+                _refresh_summary(mid, meta, read_transcript(mid), names_only=True)
         _write_meta_unlocked(mid, meta)
     return meta
+
+
+# ---------------------------------------------------------------- corrections
+# Fixing a finished transcript by hand. See corrections.py for the rules and
+# for where the untouched original is kept.
+
+def _refresh_summary(mid: str, meta: dict, segments: list, names_only: bool = False) -> str:
+    """After a correction. The built-in summary is instant, so it is rewritten
+    on the spot. An AI-written one takes minutes: it is kept and marked stale,
+    and the Summary tab offers to write it again. Caller holds meta_lock(mid)."""
+    p = DATA_DIR / mid / "summary.md"
+    if meta.get("summary_engine") == "extractive" and segments:
+        text = summarizer.extractive(segments, meta.get("speaker_names", {}))
+        p.write_text(text, encoding="utf-8")
+        meta.pop("summary_stale", None)
+        return text
+    if not names_only:
+        meta["summary_stale"] = True
+    return p.read_text(encoding="utf-8") if p.exists() else ""
+
+
+def _correct(mid: str, change):
+    """Run change(segments, meta) -> (changed indexes, removed index or None)
+    on a finished meeting and save the result. 409 while the meeting is being
+    processed, 400 when the change does not apply."""
+    d = meeting_dir(mid)
+    with meta_lock(mid):
+        meta = read_meta(mid)
+        if meta.get("status") != "done" or mid in live_status:
+            raise HTTPException(409, "this meeting is being processed")
+        segments = read_transcript(mid)
+        before = json.dumps(segments, ensure_ascii=False)
+        names_before = dict(meta.get("speaker_names") or {})
+        meta.setdefault("speaker_names", {})
+        try:
+            changed, removed = change(segments, meta)
+        except corrections.CorrectionError as e:
+            raise HTTPException(400, str(e))
+        summary = None
+        if changed or removed is not None:
+            corrections.backup_once(d, json.loads(before), names_before)
+            write_transcript(mid, segments)
+            meta["num_speakers_found"] = len(corrections.speakers_in(segments))
+            summary = _refresh_summary(mid, meta, segments)
+            _write_meta_unlocked(mid, meta)
+        if summary is None:
+            sp = d / "summary.md"
+            summary = sp.read_text(encoding="utf-8") if sp.exists() else ""
+        return {
+            "changed": {str(i): segments[i] for i in changed},
+            "removed": removed,
+            "meta": meta,
+            "summary": summary,
+            "corrected": corrections.has_backup(d),
+        }
+
+
+@app.patch("/api/meetings/{mid}/segments/{index}")
+def correct_segment(mid: str, index: int, body: dict):
+    """Correct one line. Body: {start, text?} | {start, restore: true} |
+    {start, speaker: N | "new", turn?: bool}. `start` is the line's start time
+    as the browser has it, so a stale page cannot edit the wrong line."""
+    def change(segments, meta):
+        seg = corrections.locate(segments, index, body.get("start"))
+        changed = []
+        if body.get("restore"):
+            if corrections.restore_text(seg):
+                changed.append(index)
+        elif "text" in body:
+            if corrections.set_text(seg, body["text"]):
+                changed.append(index)
+        if "speaker" in body:
+            changed += corrections.set_speaker(segments, index, body["speaker"], bool(body.get("turn")))
+        return sorted(set(changed)), None
+    return _correct(mid, change)
+
+
+@app.delete("/api/meetings/{mid}/segments/{index}")
+def delete_segment(mid: str, index: int, start: float | None = None):
+    """Remove one line (a line Whisper made up over silence, for example)."""
+    def change(segments, meta):
+        corrections.locate(segments, index, start)
+        del segments[index]
+        return [], index
+    return _correct(mid, change)
+
+
+@app.post("/api/meetings/{mid}/speakers/merge")
+def merge_speakers(mid: str, body: dict):
+    """Body: {"from": N, "into": M}. Everything N said becomes M's."""
+    def change(segments, meta):
+        return corrections.merge_speakers(
+            segments, meta["speaker_names"], body.get("from"), body.get("into")), None
+    return _correct(mid, change)
+
+
+@app.post("/api/meetings/{mid}/corrections/discard")
+def discard_corrections(mid: str):
+    """Put the transcript back as the pipeline wrote it and forget every
+    correction (text, speakers, deleted lines, merges)."""
+    d = meeting_dir(mid)
+    with meta_lock(mid):
+        meta = read_meta(mid)
+        if meta.get("status") != "done" or mid in live_status:
+            raise HTTPException(409, "this meeting is being processed")
+        if not corrections.has_backup(d):
+            raise HTTPException(400, "nothing to discard")
+        try:
+            original = corrections.read_backup(d)
+        except (OSError, ValueError) as e:
+            raise HTTPException(500, f"the saved original cannot be read: {e}")
+        write_transcript(mid, original["segments"])
+        meta["speaker_names"] = original["speaker_names"]
+        meta["num_speakers_found"] = len(corrections.speakers_in(original["segments"]))
+        _refresh_summary(mid, meta, original["segments"])
+        _write_meta_unlocked(mid, meta)
+        corrections.drop_backup(d)
+    return get_meeting(mid)
 
 
 @app.post("/api/meetings/{mid}/retranscribe")
@@ -832,6 +1030,7 @@ def resummarize(mid: str):
     with meta_lock(mid):
         meta = read_meta(mid)  # re-read: names may have changed during the summary
         meta["summary_engine"] = engine
+        meta.pop("summary_stale", None)
         _write_meta_unlocked(mid, meta)
     return {"summary": summary, "engine": engine}
 
@@ -862,7 +1061,7 @@ def export(mid: str, format: str = "txt"):
     if format == "srt":
         lines = []
         for i, s in enumerate(segs, 1):
-            lines += [str(i), f"{_fmt_ts(s['start'], True)} --> {_fmt_ts(s['end'], True)}",
+            lines += [str(i), f"{_fmt_ts(s['start'], True)} --> {_fmt_ts(timing.spoken_end(s), True)}",
                       f"[{speaker_label(meta, s['speaker'])}] {s['text']}", ""]
         body, ext = "\n".join(lines), "srt"
     elif format == "md":

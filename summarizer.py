@@ -9,6 +9,8 @@ from collections import Counter
 
 import requests
 
+import timing
+
 OLLAMA_URL = "http://localhost:11434"
 # tried in order; first one that exists locally is used
 PREFERRED_MODELS = ["qwen2.5:7b", "qwen2.5:3b", "llama3.2", "llama3.1", "gemma2", "mistral"]
@@ -70,7 +72,7 @@ def _sentences(text: str) -> list[str]:
     return [p.strip() for p in parts if len(p.strip()) > 20]
 
 
-def _extractive(segments: list[dict], speaker_names: dict) -> str:
+def extractive(segments: list[dict], speaker_names: dict) -> str:
     """Frequency-based extractive summary; language-agnostic."""
     full = " ".join(s["text"] for s in segments)
     sents = _sentences(full)
@@ -94,7 +96,7 @@ def _extractive(segments: list[dict], speaker_names: dict) -> str:
     # speaker talk-time
     talk = Counter()
     for s in segments:
-        talk[s["speaker"]] += s["end"] - s["start"]
+        talk[s["speaker"]] += timing.spoken_seconds(s)
     total = sum(talk.values()) or 1
     speaker_lines = []
     for spk, secs in talk.most_common():
@@ -131,7 +133,7 @@ def summarize(segments: list[dict], speaker_names: dict) -> tuple[str, str]:
             return _ollama_summarize("\n".join(lines), model), f"ollama:{model}"
         except Exception as e:
             print(f"[summarizer] ollama failed: {e}", flush=True)
-    return _extractive(segments, speaker_names), "extractive"
+    return extractive(segments, speaker_names), "extractive"
 
 
 # ---- quick summary for the schedule rows ------------------------------------------------------
@@ -169,7 +171,8 @@ def quick_summary(md: str, limit: int = 280) -> str:
 
         found = texts("text", lambda h: bool(_OVERVIEW_HEAD.search(h))) or texts("text") \
             or [t for t in texts("bullet")[:3]]
-        out = " ".join(found) if found and texts("text") else "; ".join(found)
+        # key points are whole sentences: drop their full stops so the join does not read ".;"
+        out = " ".join(found) if found and texts("text") else "; ".join(t.rstrip(" .;") for t in found)
         out = re.sub(r"\s+", " ", out).strip()
         if len(out) > limit:
             out = out[: limit - 1].rstrip(" ,;:.") + "…"

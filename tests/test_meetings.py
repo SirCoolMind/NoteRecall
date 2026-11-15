@@ -113,12 +113,14 @@ def test_list_has_quick_summary_from_the_overview(client, data_dir):
     _seed(data_dir, "a2", "Key points only",
           "## Perkara Utama / Key Points\n- First *point*\n- Second point\n\n> _Ringkasan automatik (extractive)._\n")
     _seed(data_dir, "a3", "No summary")
+    _seed(data_dir, "a5", "Sentences", "## Key Points\n- Server dah siap.\n- Backup jalan setiap malam.\n")
     _seed(data_dir, "a4", "Long", "## Overview\n" + "word " * 200)
     by_id = {m["id"]: m for m in client.get("/api/meetings").json()}
 
     assert by_id["a1"]["quick_summary"] == "The team agreed on the launch plan and the budget."
     assert by_id["a2"]["quick_summary"] == "First point; Second point"
     assert by_id["a3"]["quick_summary"] == ""
+    assert by_id["a5"]["quick_summary"] == "Server dah siap; Backup jalan setiap malam"
     assert len(by_id["a4"]["quick_summary"]) <= 280 and by_id["a4"]["quick_summary"].endswith("…")
 
 

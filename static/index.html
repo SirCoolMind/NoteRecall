@@ -23,7 +23,7 @@
       <div class="masthead__inner">
         <div class="masthead__lead">
           <a class="wordmark" href="/" x-text="$t('app.name')"></a>
-          <a class="masthead__back" href="#/" x-show="$store.route.id" x-cloak>
+          <a class="masthead__back" href="#/" x-show="$store.route.id" x-cloak :title="$t('meeting.back')">
             <span x-icon="'chevron-left'"></span><span x-text="$t('meeting.back')"></span>
           </a>
         </div>
@@ -290,6 +290,28 @@
                                :aria-valuenow="m.progress" :aria-label="stageName(m)">
                             <div class="bar__fill" :style="{ width: m.progress + '%' }"></div>
                           </div>
+                          <a class="row__read" :href="'#/m/' + m.id" :aria-label="$t('row.read_for', { title: m.title })">
+                            <span x-icon="'eye'"></span><span x-text="$t('row.read')"></span>
+                          </a>
+                        </div>
+                      </template>
+
+                      <template x-if="m.kind === 'ready' && saidOf(m)">
+                        <div class="row__said">
+                          <p class="row__qs-label" x-text="$t(saidOf(m).total === 1 ? 'said.label.one' : 'said.label.other', { n: saidOf(m).total, q: saidQuery })"></p>
+                          <ul class="said">
+                            <template x-for="h in saidHits(m)" :key="h.key">
+                              <li>
+                                <a class="said__hit" :href="h.href" :aria-label="$t('said.open', { time: h.time, who: h.who })">
+                                  <span class="said__time tabular" x-text="h.time"></span>
+                                  <span class="said__who" x-text="h.who"></span>
+                                  <span class="said__text"><template x-for="(p, k) in h.parts" :key="k"><span :class="p.hit ? 'hit' : null" x-text="p.text"></span></template></span>
+                                </a>
+                              </li>
+                            </template>
+                          </ul>
+                          <a class="said__more" x-show="saidMore(m) > 0" :href="saidAllHref(m)"
+                             x-text="$t('said.more', { n: saidMore(m) })"></a>
                         </div>
                       </template>
 
@@ -316,7 +338,7 @@
 
       <section class="meeting" x-data="meeting" x-show="$store.route.id" x-cloak
                @wheel.window.passive="userScrolled()" @touchmove.window.passive="userScrolled()"
-               @keydown.window="onWindowKey($event)" @pointerdown.window="onWindowPointer($event)">
+               @keydown.window="onShortcut($event); onWindowKey($event)" @pointerdown.window="onWindowPointer($event)">
 
         <div class="meeting__head">
           <div class="wrap">
@@ -352,7 +374,7 @@
                     </button>
                     <div class="menu" id="meeting-actions" role="menu" x-ref="actionsMenu" :aria-label="$t('action.more')"
                          x-show="actionsOpen" x-cloak @keydown="onActionsKey($event)">
-                      <button type="button" class="menu__item" role="menuitem" tabindex="-1" @click="retranscribe()">
+                      <button type="button" class="menu__item" role="menuitem" tabindex="-1" @click="askRetranscribe()">
                         <span x-icon="'refresh-cw'"></span><span x-text="$t('action.retranscribe')"></span>
                       </button>
                       <button type="button" class="menu__item" role="menuitem" tabindex="-1" x-show="canRework" @click="openRedetect()">
@@ -361,6 +383,12 @@
                       <button type="button" class="menu__item" role="menuitem" tabindex="-1" x-show="canRework" :disabled="summaryBusy"
                               @click="resummarize()">
                         <span x-icon="'rotate-ccw'"></span><span x-text="$t('action.resummarize')"></span>
+                      </button>
+                      <button type="button" class="menu__item" role="menuitem" tabindex="-1" x-show="corrected" @click="openDiscard()">
+                        <span x-icon="'undo-2'"></span><span x-text="$t('action.discard')"></span>
+                      </button>
+                      <button type="button" class="menu__item" role="menuitem" tabindex="-1" x-show="kind === 'ready'" @click="openKeys()">
+                        <span x-icon="'keyboard'"></span><span x-text="$t('action.keys')"></span>
                       </button>
                       <button type="button" class="menu__item menu__item--danger" role="menuitem" tabindex="-1" @click="openDelete()">
                         <span x-icon="'trash-2'"></span><span x-text="$t('action.delete')"></span>
@@ -407,7 +435,8 @@
                    :aria-valuenow="meta ? meta.progress || 0 : 0" :aria-label="stageName()">
                 <div class="bar__fill" :style="{ width: (meta ? meta.progress || 0 : 0) + '%' }"></div>
               </div>
-              <p class="mwait__text" x-show="kind !== 'failed'" x-text="$t('meeting.wait.' + kind)"></p>
+              <p class="mwait__text" x-show="kind !== 'failed' && !liveLines.length" x-text="$t('meeting.wait.' + kind)"></p>
+              <p class="mwait__text" x-show="kind === 'processing' && liveLines.length" x-text="$t('live.note')"></p>
               <div class="row__fail mwait__fail" x-show="kind === 'failed'">
                 <p class="row__error" x-text="errorText()"></p>
                 <button type="button" class="btn" @click="retry()">
@@ -415,6 +444,24 @@
                 </button>
               </div>
             </div>
+
+            <!-- Read while it works: the lines transcribed so far. Speakers come at the end. -->
+            <template x-if="state === 'waiting' && kind === 'processing' && liveLines.length">
+              <section class="live" aria-labelledby="live-title">
+                <h2 class="live__title" id="live-title">
+                  <span x-text="$t('live.title')"></span>
+                  <span class="live__count tabular" x-text="$t(liveLines.length === 1 ? 'live.count.one' : 'live.count.other', { n: liveLines.length })"></span>
+                </h2>
+                <ol class="live__lines">
+                  <template x-for="(l, i) in liveLines" :key="i">
+                    <li class="live__line">
+                      <span class="live__time tabular" x-text="fmt(l.start)"></span>
+                      <span class="live__text" x-text="l.text"></span>
+                    </li>
+                  </template>
+                </ol>
+              </section>
+            </template>
           </div>
         </div>
 
@@ -428,6 +475,13 @@
                         :aria-label="playing ? $t('ribbon.pause') : $t('ribbon.play')" :title="playing ? $t('ribbon.pause') : $t('ribbon.play')">
                   <span x-icon="playing ? 'pause' : 'play'"></span>
                 </button>
+                <button type="button" class="ribbon__aux" @click="skip(-5)"
+                        :aria-label="$t('ribbon.back')" :title="$t('ribbon.back')">
+                  <span x-icon="'rotate-ccw'"></span>
+                </button>
+                <button type="button" class="ribbon__aux ribbon__speed tabular" :class="{ 'is-set': speed !== 1 }" @click="nextSpeed()"
+                        :aria-label="$t('ribbon.speed', { speed: speedText })" :title="$t('ribbon.speed.title')"
+                        x-text="speedText"></button>
 
                 <p class="ribbon__clock tabular">
                   <span x-text="fmt(now)"></span><span class="ribbon__of"> / </span><span x-text="fmt(total)"></span>
@@ -446,27 +500,43 @@
                       <input type="search" class="spk__filter" x-model="speakerFilter" autocomplete="off"
                              :aria-label="$t('speakers.filter')" :placeholder="$t('speakers.filter')">
                     </div>
+                    <div class="spk__mode" x-show="popMerge !== null" x-cloak role="group" :aria-label="$t('merge.title')">
+                      <p class="spk__modetext" x-show="mergeInto === null" x-text="popMerge !== null ? $t('merge.pick', { name: speakerName(popMerge) }) : ''"></p>
+                      <p class="spk__modetext" x-show="mergeInto !== null" x-text="mergeInto !== null ? $t(linesOf(popMerge) === 1 ? 'merge.confirm.one' : 'merge.confirm.other', { from: speakerName(popMerge), into: speakerName(mergeInto), n: linesOf(popMerge) }) : ''"></p>
+                      <div class="spk__modeacts">
+                        <button type="button" class="btn btn--key spk__go" x-show="mergeInto !== null" :disabled="busy" @click="confirmMerge()">
+                          <span x-icon="'merge'"></span><span x-text="$t('merge.go')"></span>
+                        </button>
+                        <button type="button" class="btn spk__cancel" @click="cancelMerge()" x-text="$t('dialog.cancel')"></button>
+                      </div>
+                    </div>
                     <ul class="spk__list">
                       <template x-for="r in speakerRows" :key="r.speaker">
-                        <li class="spk__row">
+                        <li class="spk__row" :class="{ 'is-source': popMerge === r.speaker, 'is-target': mergeInto === r.speaker }">
                           <template x-if="popRename !== r.speaker">
-                            <button type="button" class="spk__jump" @click="pickSpeaker(r.speaker)"
-                                    :title="$t('ribbon.chip_title', { speaker: r.name })">
+                            <button type="button" class="spk__jump" @click="onSpeakerRow(r.speaker)" :disabled="popMerge !== null && (popMerge === r.speaker || r.speaker < 0)"
+                                    :aria-label="popMerge === null ? null : $t('merge.into', { name: r.name })"
+                                    :title="popMerge === null ? $t('ribbon.chip_title', { speaker: r.name }) : $t('merge.into', { name: r.name })">
                               <span class="spk__swatch" :style="{ background: r.color }"></span>
                               <span class="spk__name" :style="{ color: r.color }" x-text="r.name"></span>
                               <span class="spk__meta tabular" x-text="r.meta"></span>
                             </button>
                           </template>
                           <template x-if="popRename === r.speaker">
-                            <input type="text" class="spk__input" x-model="popDraft" maxlength="60"
+                            <input type="text" class="spk__input" x-model="popDraft" maxlength="60" list="known-names" autocomplete="off"
                                    :aria-label="$t('rename.input', { name: r.name })"
                                    @keydown.enter.prevent="commitPopRename(r.speaker, true)"
                                    @keydown.escape.stop.prevent="cancelPopRename(r.speaker)" @blur="commitPopRename(r.speaker)">
                           </template>
-                          <button type="button" class="spk__edit" :data-rename-spk="r.speaker" x-show="r.speaker >= 0"
+                          <button type="button" class="spk__edit" :data-rename-spk="r.speaker" x-show="r.speaker >= 0 && popMerge === null"
                                   :aria-label="$t('rename.label', { name: r.name })" :title="$t('rename.label', { name: r.name })"
                                   @mousedown.prevent @click="startPopRename(r.speaker)">
                             <span x-icon="'pencil'"></span>
+                          </button>
+                          <button type="button" class="spk__edit" :data-merge-spk="r.speaker" x-show="r.speaker >= 0 && popMerge === null && speakerCount > 1"
+                                  :aria-label="$t('merge.label', { name: r.name })" :title="$t('merge.label', { name: r.name })"
+                                  @click="startMerge(r.speaker)">
+                            <span x-icon="'merge'"></span>
                           </button>
                         </li>
                       </template>
@@ -552,9 +622,12 @@
 
               <div id="panel-transcript" role="tabpanel" aria-labelledby="tab-transcript" x-show="tab === 'transcript'">
                 <p class="mnote" x-show="!segments.length" x-text="$t('transcript.empty')"></p>
-                <ol class="lines" x-show="segments.length">
+                <datalist id="known-names">
+                  <template x-for="n in knownNames" :key="n"><option :value="n"></option></template>
+                </datalist>
+                <ol class="lines" x-show="segments.length" :style="{ '--edited-label': JSON.stringify($t('line.edited')) }">
                   <template x-for="(seg, i) in segments" :key="i">
-                    <li class="line" :class="{ 'is-now': i === activeIdx, 'is-run': startsRun(i) }" :data-line="i"
+                    <li class="line" :class="{ 'is-now': i === activeIdx, 'is-run': startsRun(i), 'is-edited': seg.orig !== undefined, 'is-open': menuLine === i || editLine === i }" :data-line="i"
                         :aria-current="i === activeIdx ? 'true' : null" @click="onLineClick(i)">
                       <button type="button" class="line__time tabular" @click.stop="onLineClick(i)"
                               :aria-label="$t('transcript.seek', { time: fmt(seg.start) })" x-text="fmt(seg.start)"></button>
@@ -565,7 +638,7 @@
                                   :title="$t('rename.label', { name: speakerName(seg.speaker) })" x-text="speakerName(seg.speaker)"></button>
                         </template>
                         <template x-if="renamingLine === i">
-                          <input type="text" class="who__input" x-model="nameDraft" maxlength="60"
+                          <input type="text" class="who__input" x-model="nameDraft" maxlength="60" list="known-names" autocomplete="off"
                                  :aria-label="$t('rename.input', { name: speakerName(seg.speaker) })"
                                  x-init="$nextTick(() => { $el.focus(); $el.select(); })" @click.stop
                                  @keydown.enter.prevent="commitRename(i, true)"
@@ -575,9 +648,67 @@
                         <span class="sr-only" x-show="!startsRun(i)" x-text="speakerName(seg.speaker)"></span>
                       </span>
                       <span class="line__text">
-                        <template x-if="!matchLines[i]"><span x-text="seg.text"></span></template>
-                        <template x-if="matchLines[i]">
+                        <template x-if="editLine !== i && !matchLines[i]"><span x-text="seg.text"></span></template>
+                        <template x-if="editLine !== i && matchLines[i]">
                           <span><template x-for="(p, k) in matchLines[i]" :key="k"><span :class="p.n < 0 ? null : 'hit' + (p.n === current ? ' is-current' : '')" x-text="p.text"></span></template></span>
+                        </template>
+                        <template x-if="editLine === i">
+                          <span class="ledit" @click.stop>
+                            <textarea class="ledit__box" x-model="textDraft" rows="1" maxlength="2000" spellcheck="false"
+                                      :aria-label="$t('line.edit.label', { time: fmt(seg.start) })"
+                                      x-init="$nextTick(() => { growBox($el); $el.focus(); })" @input="growBox($el)"
+                                      @keydown.enter.prevent="saveText(i)" @keydown.escape.stop.prevent="cancelText(i)"
+                                      @keydown.ctrl.space.prevent="toggle()"></textarea>
+                            <span class="ledit__row">
+                              <button type="button" class="btn btn--key" :disabled="busy" @click="saveText(i)" x-text="$t('line.save')"></button>
+                              <button type="button" class="btn" @click="cancelText(i)" x-text="$t('dialog.cancel')"></button>
+                              <button type="button" class="btn" @click="replayLine(i)">
+                                <span x-icon="'play'"></span><span x-text="$t('line.replay')"></span>
+                              </button>
+                              <span class="ledit__hint" x-text="$t('line.edit.hint')"></span>
+                            </span>
+                          </span>
+                        </template>
+                      </span>
+                      <span class="line__tools" @click.stop>
+                        <button type="button" class="line__more" aria-haspopup="menu" :aria-expanded="menuLine === i" :data-more="i"
+                                :aria-label="$t('line.more', { time: fmt(seg.start) })" :title="$t('line.more.title')"
+                                @click="toggleLineMenu(i)"></button>
+                        <template x-if="menuLine === i">
+                          <div class="menu line__menu" role="menu" :aria-label="$t('line.more', { time: fmt(seg.start) })"
+                               x-init="$nextTick(() => openedLineMenu($el))"
+                               @keydown="onLineMenuKey($event, i)" @click.outside="closeLineMenu(false)">
+                            <button type="button" class="menu__item" role="menuitem" tabindex="-1" @click="editText(i)">
+                              <span x-icon="'pencil'"></span><span x-text="$t('line.edit')"></span>
+                            </button>
+                            <button type="button" class="menu__item" role="menuitem" tabindex="-1" x-show="seg.orig !== undefined" @click="restoreLine(i)">
+                              <span x-icon="'undo-2'"></span>
+                              <span class="menu__two"><span x-text="$t('line.restore')"></span><span class="menu__sub" x-text="seg.orig"></span></span>
+                            </button>
+                            <button type="button" class="menu__item menu__item--danger" role="menuitem" tabindex="-1" @click="deleteLine(i)">
+                              <span x-icon="'trash-2'"></span><span x-text="delArmed ? $t('line.delete.sure') : $t('line.delete')"></span>
+                            </button>
+                            <div class="menu__group" role="group" :aria-label="$t('line.speaker')">
+                              <p class="menu__label" x-text="$t('line.speaker')"></p>
+                              <label class="menu__opt" x-show="turnLength(i) > 1">
+                                <input type="checkbox" x-model="wholeTurn">
+                                <span x-text="$t('line.whole_turn', { n: turnLength(i) })"></span>
+                              </label>
+                              <template x-for="r in menuSpeakers" :key="r.speaker">
+                                <button type="button" class="menu__item" role="menuitemradio" tabindex="-1" :aria-checked="r.speaker === seg.speaker"
+                                        :disabled="busy" @click="moveLine(i, r.speaker)">
+                                  <span class="menu__check" :class="{ 'is-off': r.speaker !== seg.speaker }" x-icon="'check'"></span>
+                                  <span class="spk__swatch" :style="{ background: r.color }"></span>
+                                  <span class="menu__name" x-text="r.name"></span>
+                                </button>
+                              </template>
+                              <button type="button" class="menu__item" role="menuitem" tabindex="-1" :disabled="busy" @click="moveLine(i, 'new')">
+                                <span class="menu__check is-off" x-icon="'check'"></span>
+                                <span class="spk__swatch spk__swatch--new"></span>
+                                <span class="menu__name" x-text="$t('line.speaker.new')"></span>
+                              </button>
+                            </div>
+                          </div>
                         </template>
                       </span>
                     </li>
@@ -593,6 +724,13 @@
                   </p>
                   <div class="bar"><div class="bar__fill" style="width: 100%"></div></div>
                   <p class="mnote summary__hint" x-text="$t('summary.busy_hint')"></p>
+                </div>
+                <div class="dnote summary__stale" x-show="!summaryBusy && meta && meta.summary_stale && summaryBlocks.length" x-cloak>
+                  <span class="dnote__icon" x-icon="'info'"></span>
+                  <p class="dnote__text" x-text="$t('summary.stale')"></p>
+                  <button type="button" class="btn dnote__btn" @click="resummarize()">
+                    <span x-icon="'rotate-ccw'"></span><span x-text="$t('action.resummarize')"></span>
+                  </button>
                 </div>
                 <p class="mnote" x-show="!summaryBusy && !summaryBlocks.length" x-text="$t('summary.empty')"></p>
                 <div class="summary__body" x-show="!summaryBusy && summaryBlocks.length">
@@ -638,6 +776,7 @@
           <form method="dialog" class="dialog__form" @submit.prevent="confirmRedetect()">
             <h2 class="dialog__title" id="redo-title" x-text="$t('redo.title')"></h2>
             <p class="dialog__text" x-text="$t('redo.body')"></p>
+            <p class="dialog__text dialog__warn" x-show="hasCorrections" x-text="$t('redo.corrected')"></p>
             <div class="field">
               <span class="field__label" id="redo-count" x-text="$t('redo.count')"></span>
               <div x-segmented="{ labelledby: 'redo-count', options: $segOptions('speakers'), value: redoCount, onChange: (v) => redoCount = v }"></div>
@@ -647,6 +786,52 @@
               <button type="submit" class="btn btn--solid"><span x-icon="'users'"></span><span x-text="$t('redo.go')"></span></button>
             </div>
           </form>
+        </dialog>
+
+        <dialog class="dialog" x-ref="retxDialog" aria-labelledby="retx-title" aria-describedby="retx-body" @close="afterDialog()">
+          <div class="dialog__form">
+            <h2 class="dialog__title" id="retx-title" x-text="$t('retx.title')"></h2>
+            <p class="dialog__text" id="retx-body" x-text="$t('retx.body')"></p>
+            <p class="dialog__text dialog__warn" x-text="$t('retx.warn')"></p>
+            <div class="dialog__actions">
+              <button type="button" class="btn" autofocus @click="$refs.retxDialog.close()" x-text="$t('dialog.cancel')"></button>
+              <button type="button" class="btn btn--danger" @click="$refs.retxDialog.close(); retranscribe()">
+                <span x-icon="'refresh-cw'"></span><span x-text="$t('action.retranscribe')"></span>
+              </button>
+            </div>
+          </div>
+        </dialog>
+
+        <dialog class="dialog" x-ref="keysDialog" aria-labelledby="keys-title" @close="afterDialog()">
+          <div class="dialog__form">
+            <h2 class="dialog__title" id="keys-title" x-text="$t('keys.title')"></h2>
+            <p class="dialog__text" x-text="$t('keys.intro')"></p>
+            <dl class="keys">
+              <div class="keys__row"><dt><kbd>Space</kbd> <kbd>K</kbd></dt><dd x-text="$t('keys.toggle')"></dd></div>
+              <div class="keys__row"><dt><kbd>←</kbd> <kbd>→</kbd></dt><dd x-text="$t('keys.seek')"></dd></div>
+              <div class="keys__row"><dt><kbd>[</kbd> <kbd>]</kbd></dt><dd x-text="$t('keys.speed')"></dd></div>
+              <div class="keys__row"><dt><kbd>/</kbd></dt><dd x-text="$t('keys.find')"></dd></div>
+              <div class="keys__row"><dt><kbd>Enter</kbd></dt><dd x-text="$t('keys.next')"></dd></div>
+              <div class="keys__row"><dt><kbd>Alt</kbd> <kbd>←</kbd> <kbd>→</kbd></dt><dd x-text="$t('keys.turn')"></dd></div>
+              <div class="keys__row"><dt><kbd>?</kbd></dt><dd x-text="$t('keys.help')"></dd></div>
+            </dl>
+            <div class="dialog__actions">
+              <button type="button" class="btn" autofocus @click="$refs.keysDialog.close()" x-text="$t('keys.close')"></button>
+            </div>
+          </div>
+        </dialog>
+
+        <dialog class="dialog" x-ref="discardDialog" aria-labelledby="discard-title" aria-describedby="discard-body" @close="afterDialog()">
+          <div class="dialog__form">
+            <h2 class="dialog__title" id="discard-title" x-text="$t('discard.title')"></h2>
+            <p class="dialog__text" id="discard-body" x-text="$t('discard.body')"></p>
+            <div class="dialog__actions">
+              <button type="button" class="btn" autofocus @click="$refs.discardDialog.close()" x-text="$t('dialog.cancel')"></button>
+              <button type="button" class="btn btn--danger" :disabled="busy" @click="confirmDiscard()">
+                <span x-icon="'undo-2'"></span><span x-text="$t('discard.go')"></span>
+              </button>
+            </div>
+          </div>
         </dialog>
 
         <dialog class="dialog" x-ref="delDialog" aria-labelledby="del-title" aria-describedby="del-body" @close="afterDialog()">

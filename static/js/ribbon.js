@@ -9,6 +9,17 @@ export function speakerOf(seg) {
   return Number.isInteger(seg.speaker) ? seg.speaker : -1;
 }
 
+// How long a line can really have lasted. Whisper sometimes stretches a line's end across a long
+// silence (a few words that "last" minutes), which would paint the ribbon wrongly and inflate that
+// speaker's talk time. Generous on purpose: 10 s plus half a second per character; ordinary speech
+// is 12 to 15 characters per second. The same rule lives in timing.py for the server.
+export function spokenEnd(seg) {
+  const start = seg.start || 0;
+  if (!seg.text) return seg.end || 0;   // no text to judge by
+  const limit = start + 10 + 0.5 * seg.text.length;
+  return Math.min(seg.end || 0, Math.round(limit * 100) / 100);
+}
+
 export const NEUTRAL = "var(--ink-2)";   // unknown speakers and everyone beyond the eighth hue
 export const PALETTE_SIZE = 8;           // --spk-0 .. --spk-7
 export const MAX_LANES = 6;              // the top five speakers get a lane, the rest share "Others"
@@ -20,7 +31,7 @@ export function rankSpeakers(segments) {
   const secs = new Map();
   let all = 0;
   for (const seg of segments) {
-    const len = Math.max(0, (seg.end || 0) - (seg.start || 0));
+    const len = Math.max(0, spokenEnd(seg) - (seg.start || 0));
     const spk = speakerOf(seg);
     secs.set(spk, (secs.get(spk) || 0) + len);
     all += len;
@@ -59,9 +70,9 @@ export function buildRuns(segments) {
     const run = runs[runs.length - 1];
     if (run && run.speaker === spk) {
       run.last = i;
-      run.end = Math.max(run.end, seg.end);
+      run.end = Math.max(run.end, spokenEnd(seg));
     } else {
-      runs.push({ speaker: spk, first: i, last: i, start: seg.start, end: seg.end });
+      runs.push({ speaker: spk, first: i, last: i, start: seg.start, end: spokenEnd(seg) });
     }
   });
   return runs;
@@ -97,7 +108,7 @@ export function buildLanes(segments, total, width, ranking = rankSpeakers(segmen
   for (const seg of segments) {
     const g = groups[laneOf.has(speakerOf(seg)) ? laneOf.get(speakerOf(seg)) : groups.length - 1];
     const start = clamp(seg.start, 0, total);
-    g.spans.push({ start, end: clamp(seg.end, start, total) });
+    g.spans.push({ start, end: clamp(spokenEnd(seg), start, total) });
   }
   return groups.map(({ spans, ...lane }) => {
     spans.sort((a, b) => a.start - b.start);

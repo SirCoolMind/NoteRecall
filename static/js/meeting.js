@@ -12,6 +12,8 @@ import {
 import { SPEAKER_CHOICES } from "./segmented.js";
 import { findMatches, lineOfMatch } from "./search.js";
 import { parseSummary, withTalkBlocks, speakerIndexByName } from "./summary.js";
+import { setTabTitle } from "./tabtitle.js";
+import { loadSpeed, saveSpeed, stepSpeed, cycleSpeed, speedLabel, shortcutFor, elementContext } from "./keys.js";
 
 const POLL_MS = 2000;
 const FOLLOW_PAUSE_MS = 4000;   // after the user scrolls, playback stops pulling the transcript for this long
@@ -31,6 +33,7 @@ export function registerMeeting(Alpine) {
     let ticket = 0;      // invalidates responses that arrive after the route changed
     let plotObserver = null;   // keeps the lanes and time marks in step with the track width
     let rootEl = null;   // the component element; $root is only valid inside the synchronous handler
+    let quietQuery = null;   // a search set from a moment link: its watcher run must not jump to the first match
 
     return {
       ...titleEditing(),
@@ -51,6 +54,8 @@ export function registerMeeting(Alpine) {
       activeIdx: -1,   // transcript line being spoken
       playing: false,
       audioError: false,
+      liveLines: [],   // while processing: lines transcribed so far, without speakers
+      speed: loadSpeed(),   // playback rate, remembered across meetings
       format: loadFormat(),
       menuOpen: false,
 
@@ -72,6 +77,17 @@ export function registerMeeting(Alpine) {
       renamingLine: -1,        // transcript line whose speaker name is being edited
       nameDraft: "",
 
+      // corrections (see corrections.py): the server keeps the untouched transcript beside the corrected one
+      corrected: false,        // an original is being kept, so "Discard corrections" is offered
+      knownNames: [],          // names given to speakers in any meeting, suggested while naming
+      menuLine: -1,            // transcript line whose menu is open
+      editLine: -1,            // transcript line whose text is being edited
+      textDraft: "",
+      wholeTurn: false,        // the speaker choice in the line menu applies to the whole turn
+      delArmed: false,         // "Delete line" was pressed once; the second press deletes
+      popMerge: null,          // speaker being merged away, picked in the Speakers popover
+      mergeInto: null,         // the speaker it will join, waiting for confirmation
+
       query: "",
       matchTotal: 0,
       matchLines: {},          // line index -> [{ text, n }] parts, only for lines that hold a match
@@ -84,7 +100,13 @@ export function registerMeeting(Alpine) {
       init() {
         rootEl = this.$root;
         this.$watch("$store.route.id", (id) => this.open(id));
-        this.$watch("query", () => this.runSearch());
+        // The same meeting at another moment (a second search result, a pasted link).
+        this.$watch("$store.route.n", () => { if (this.state === "ready" && Alpine.store("route").id === this.id) this.applyMoment(); });
+        this.$watch("query", () => {
+          if (quietQuery === this.query) { quietQuery = null; return; }   // applyMoment already searched
+          quietQuery = null;
+          this.runSearch();
+        });
         this.open(Alpine.store("route").id);
       },
 
@@ -104,7 +126,9 @@ export function registerMeeting(Alpine) {
         clearTimeout(pollTimer);
         if (player) { player.destroy(); player = null; }
         this.meta = null; this.kind = ""; this.segments = []; this.slots = []; this.lanes = []; this.ticks = []; this._plotW = 0;
+        this.liveLines = [];
         this.ranking = []; this.colors = new Map(); this.speakersOpen = false; this.speakerFilter = ""; this.popRename = null;
+        this.corrected = false; this.popMerge = null; this.mergeInto = null;
         this.total = 0; this.now = 0; this.activeIdx = -1;
         this.playing = false; this.audioError = false; this.menuOpen = false; this.editing = null;
         this.resetReview();
@@ -114,6 +138,7 @@ export function registerMeeting(Alpine) {
       // Back to a clean transcript view: no search, no rename, no open menu.
       resetReview() {
         this.tab = "transcript"; this.actionsOpen = false; this.renamingLine = -1;
+        this.menuLine = -1; this.editLine = -1; this.delArmed = false;
         this.query = ""; this.matchTotal = 0; this.matchLines = {}; this.current = -1;
       },
 
@@ -137,19 +162,70 @@ export function registerMeeting(Alpine) {
         const wasReady = this.state === "ready";
         this.meta = body.meta;
         this.kind = statusKind(body.meta.status);
+        this.syncTitle();
         if (this.kind !== "ready") {
           this.state = "waiting";
+          if (this.kind === "processing") await this.pullLive(mine);
+          else this.liveLines = [];
           return again();
         }
         if (wasReady) return;
-        this.segments = body.segments || [];
-        this.ranking = rankSpeakers(this.segments);
-        this.colors = speakerColors(this.ranking);
-        this.setSummary(body.summary);
-        this.total = this.recordingLength(body.meta.duration);
-        this.slots = buildSlots(this.segments, this.total);
+        this.liveLines = [];
+        this.showTranscript(body);
         this.state = "ready";
         this.$nextTick(() => this.mountPlayer());
+      },
+
+      // While the recording is processed: fetch the lines transcribed since the last poll.
+      async pullLive(mine) {
+        let body;
+        try {
+          const res = await fetch(`/api/meetings/${this.id}/live?after=${this.liveLines.length}`);
+          if (!res.ok) return;
+          body = await res.json();
+        } catch (e) { return; }   // the next poll tries again
+        if (mine !== ticket) return;
+        // fewer lines than we hold means a new job started (re-transcribe): start over
+        if (body.total < this.liveLines.length) { this.liveLines = []; return; }
+        if (!body.lines.length) return;
+        // keep the reading position: follow the newest line only when the reader has scrolled to the end
+        const doc = document.documentElement;
+        const atEnd = window.scrollY > 0 && window.innerHeight + window.scrollY >= doc.scrollHeight - 80;
+        this.liveLines.push(...body.lines);
+        if (atEnd && this.liveLines.length > body.lines.length) {
+          this.$nextTick(() => window.scrollTo({ top: doc.scrollHeight, behavior: reducedMotion() ? "auto" : "smooth" }));
+        }
+      },
+
+      // The browser tab shows the meeting, and the percentage while it is processed.
+      syncTitle() {
+        if (!this.meta || Alpine.store("route").id !== this.id) return;
+        setTabTitle({
+          name: this.meta.title || "",
+          progress: this.kind === "processing" ? this.meta.progress || 0 : null,
+          failed: this.kind === "failed",
+        });
+      },
+
+      // Put a finished meeting's transcript on screen (first load, or after corrections were discarded).
+      showTranscript(body) {
+        this.meta = body.meta;
+        this.segments = body.segments || [];
+        this.corrected = !!body.corrected;
+        this.knownNames = body.known_names || [];
+        this.setSummary(body.summary);
+        this.total = Math.max(this.total, this.recordingLength(body.meta.duration));
+        this.rebuild();
+      },
+
+      // Everything derived from the segments: talk-time ranking, colours, turns, and the ribbon lanes.
+      rebuild() {
+        this.ranking = rankSpeakers(this.segments);
+        this.colors = speakerColors(this.ranking);
+        this.slots = buildSlots(this.segments, this.total);
+        this._plotW = 0;
+        this.layoutRibbon();
+        if (this.query.trim()) this.runSearch(false);
       },
 
       recordingLength(fromAudio) {
@@ -160,7 +236,7 @@ export function registerMeeting(Alpine) {
       retry() { return this.reprocess(`/api/meetings/${this.id}/retranscribe`); },
 
       // ------------------------------------------------------------ title
-      applyTitle(id, title) { if (this.meta && this.meta.id === id) this.meta.title = title; },
+      applyTitle(id, title) { if (this.meta && this.meta.id === id) { this.meta.title = title; this.syncTitle(); } },
       titleSaved() {},
 
       // ------------------------------------------------------------ player
@@ -185,6 +261,9 @@ export function registerMeeting(Alpine) {
           onState: (playing) => { this.playing = playing; },
         });
         audio.src = `/api/meetings/${this.id}/audio`;
+        // Loading a source resets playbackRate to defaultPlaybackRate, so the remembered speed goes on both.
+        audio.defaultPlaybackRate = this.speed;
+        audio.playbackRate = this.speed;
         player.place();
         this.layoutRibbon();
         const plot = this.$refs.plot;
@@ -192,6 +271,26 @@ export function registerMeeting(Alpine) {
           plotObserver = new ResizeObserver(() => this.layoutRibbon());
           plotObserver.observe(plot);
         }
+        this.applyMoment();
+      },
+
+      // '#/m/<id>?t=754&q=firewall': open at that second, with the search filled in and that line's match current.
+      applyMoment() {
+        const { t, q } = Alpine.store("route");
+        if (!q && t === null) return;
+        this.selectTab("transcript");
+        if (q) {
+          if (q !== this.query) quietQuery = q;
+          this.query = q;
+          this.runSearch(t === null);
+        }
+        if (t === null) return;
+        const idx = segmentAt(this.segments, t + 0.01);
+        const here = (this.matchLines[idx] || []).find((p) => p.n >= 0);
+        if (here) this.current = here.n;
+        this.seekTo(t, false);
+        followUntil = performance.now() + FOLLOW_PAUSE_MS;   // the search watcher must not pull the page elsewhere
+        this.$nextTick(() => this.bringIntoView(idx));
       },
 
       // Lanes merge blocks closer than ~2 track pixels, so they depend on the rendered width.
@@ -214,6 +313,21 @@ export function registerMeeting(Alpine) {
       },
 
       toggle() { player?.toggle(); },
+
+      // Relative seek: the back-5 button and the arrow keys.
+      skip(seconds) { if (player) this.seekTo(player.time + seconds, true); },
+
+      get speedText() { return speedLabel(this.speed); },
+      setSpeed(speed) {
+        if (speed === this.speed) return;
+        this.speed = speed;
+        saveSpeed(speed);
+        const audio = this.$refs.audio;
+        if (audio) { audio.defaultPlaybackRate = speed; audio.playbackRate = speed; }
+      },
+      nextSpeed() { this.setSpeed(cycleSpeed(this.speed)); },
+
+      openKeys() { this.closeActions(false); this.$refs.keysDialog?.showModal(); },
 
       // Seek from anywhere (ribbon, slot, line, key). `reveal` scrolls the transcript to that moment.
       seekTo(t, reveal) {
@@ -308,6 +422,8 @@ export function registerMeeting(Alpine) {
         if (!this.speakersOpen) return;
         this.speakersOpen = false;
         this.popRename = null;
+        this.popMerge = null;
+        this.mergeInto = null;
         if (refocus) this.$refs.speakersBtn?.focus();
       },
       // Focus leaving the popover (Tab away) closes it, unless it went to the button that toggles it.
@@ -323,6 +439,7 @@ export function registerMeeting(Alpine) {
         this.$refs.track?.focus({ preventScroll: true });
       },
       startPopRename(spk) {
+        this.popMerge = null; this.mergeInto = null;
         this.popDraft = this.speakerName(spk);
         this.popRename = spk;
         this.$nextTick(() => this.$refs.speakersPop.querySelector(".spk__input")?.focus());
@@ -355,6 +472,7 @@ export function registerMeeting(Alpine) {
       startsRun(i) { return i === 0 || this.segments[i].speaker !== this.segments[i - 1].speaker; },
 
       onLineClick(i) {
+        if (this.editLine === i) return;
         if (String(window.getSelection())) return;   // the user is selecting text to copy, not seeking
         this.seekTo(this.segments[i].start, false);
       },
@@ -380,6 +498,24 @@ export function registerMeeting(Alpine) {
         if (this.state !== "ready" || e.defaultPrevented || !SCROLL_KEYS.includes(e.key)) return;
         if (e.target.closest?.("input, select, textarea, dialog, [role=slider], [role=menu], [role=tab]")) return;
         this.userScrolled();
+      },
+      // Player keys that work wherever focus is, unless the user is typing or a control owns the key.
+      onShortcut(e) {
+        if (this.state !== "ready" || e.defaultPrevented || !player) return;
+        if (document.querySelector("dialog[open]")) return;
+        const action = shortcutFor(e, elementContext(e.target));
+        if (!action) return;
+        e.preventDefault();
+        if (action === "toggle") this.toggle();
+        else if (action === "back") this.skip(-SEEK_STEP);
+        else if (action === "forward") this.skip(SEEK_STEP);
+        else if (action === "slower") this.setSpeed(stepSpeed(this.speed, -1));
+        else if (action === "faster") this.setSpeed(stepSpeed(this.speed, 1));
+        else if (action === "help") this.openKeys();
+        else if (action === "find") {
+          this.selectTab("transcript");
+          this.$nextTick(() => { this.$refs.find?.focus(); this.$refs.find?.select(); });
+        }
       },
       onWindowPointer(e) {
         // A press on the page's own scrollbar (drag to scroll) lands outside the client area.
@@ -419,19 +555,203 @@ export function registerMeeting(Alpine) {
             body: JSON.stringify({ speaker_names: { [spk]: name } }),
           });
           if (!res.ok) throw new Error(String(res.status));
+          if (!this.knownNames.includes(name)) this.knownNames = [...this.knownNames, name].sort((a, b) => a.localeCompare(b));
         } catch (e) {
           if (this.meta) this.meta.speaker_names = before || {};
           this.actionError = this.t("rename.failed");
         }
       },
 
+      // ------------------------------------------------------------ corrections
+      // One request, one answer shape: { changed: { index: segment }, removed, meta, summary, corrected }.
+      async correct(method, path, body) {
+        if (this.busy) return false;
+        this.busy = true;
+        this.actionError = "";
+        const mine = ticket;
+        let data = null;
+        try {
+          const res = await fetch(`/api/meetings/${this.id}${path}`, {
+            method, headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined,
+          });
+          if (res.ok) data = await res.json();
+          else if (res.status === 400 || res.status === 409) this.actionError = this.t("correct.stale");
+        } catch (e) { /* reported below */ }
+        if (mine !== ticket) return false;
+        this.busy = false;
+        if (!data) { if (!this.actionError) this.actionError = this.t("action.failed"); return false; }
+        if (Number.isInteger(data.removed)) {
+          this.segments.splice(data.removed, 1);
+          // line numbers moved up by one: the line being spoken is found again from the time
+          this.activeIdx = player ? segmentAt(this.segments, player.time) : -1;
+        }
+        for (const [i, seg] of Object.entries(data.changed || {})) this.segments[Number(i)] = seg;
+        this.meta = data.meta;
+        this.corrected = !!data.corrected;
+        this.setSummary(data.summary);
+        this.rebuild();
+        return true;
+      },
+      get hasCorrections() { return this.corrected || this.segments.some((s) => s.orig !== undefined); },
+
+      // ---- the menu on each line
+      get menuSpeakers() {
+        return this.ranking.filter((r) => r.speaker >= 0)
+          .map((r) => ({ speaker: r.speaker, name: this.speakerName(r.speaker), color: this.speakerColor(r.speaker) }));
+      },
+      turnLength(i) {
+        const spk = this.segments[i]?.speaker;
+        let lo = i, hi = i;
+        while (lo > 0 && this.segments[lo - 1].speaker === spk) lo--;
+        while (hi + 1 < this.segments.length && this.segments[hi + 1].speaker === spk) hi++;
+        return hi - lo + 1;
+      },
+      toggleLineMenu(i) {
+        if (this.menuLine === i) return this.closeLineMenu(true);
+        this.editLine = -1;
+        this.wholeTurn = false;
+        this.delArmed = false;
+        this.menuLine = i;
+      },
+      // The menu just rendered: focus its first item and make sure all of it is on screen.
+      openedLineMenu(el) {
+        el.querySelector("[role^=menuitem]")?.focus({ preventScroll: true });
+        const over = el.getBoundingClientRect().bottom - (window.innerHeight - 16);
+        if (over > 0) { this.userScrolled(); window.scrollBy({ top: over, behavior: "auto" }); }
+      },
+      closeLineMenu(refocus) {
+        const i = this.menuLine;
+        if (i < 0) return;
+        this.menuLine = -1;
+        this.delArmed = false;
+        if (refocus) this.$nextTick(() => rootEl.querySelector(`[data-more="${i}"]`)?.focus({ preventScroll: true }));
+      },
+      onLineMenuKey(e, i) {
+        if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); this.closeLineMenu(true); return; }
+        const items = [...e.currentTarget.querySelectorAll("[role^=menuitem], input")].filter((el) => el.offsetParent !== null && !el.disabled);
+        const at = items.indexOf(document.activeElement);
+        const step = { ArrowDown: 1, ArrowUp: -1 }[e.key];
+        if (e.key === "Home") items[0]?.focus();
+        else if (e.key === "End") items[items.length - 1]?.focus();
+        else if (step) items[(at + step + items.length) % items.length]?.focus();
+        else if (e.key === "Tab") { this.closeLineMenu(false); return; }
+        else return;
+        e.preventDefault();
+      },
+
+      // ---- a line's text
+      editText(i) {
+        this.menuLine = -1;
+        this.renamingLine = -1;
+        this.textDraft = this.segments[i].text;
+        this.editLine = i;
+      },
+      growBox(el) { el.style.height = "auto"; el.style.height = el.scrollHeight + 2 + "px"; },
+      focusLine(i) { this.$nextTick(() => rootEl.querySelector(`[data-more="${i}"]`)?.focus({ preventScroll: true })); },
+      cancelText(i) {
+        this.editLine = -1;
+        this.focusLine(i);
+      },
+      async saveText(i) {
+        const seg = this.segments[i];
+        const text = this.textDraft.replace(/\s+/g, " ").trim();
+        if (!seg || this.editLine !== i) return;
+        if (!text || text === seg.text) return this.cancelText(i);
+        if (await this.correct("PATCH", `/segments/${i}`, { start: seg.start, text })) this.cancelText(i);
+      },
+      replayLine(i) {
+        this.seekTo(this.segments[i].start, false);
+        if (!this.playing) this.toggle();
+      },
+      async restoreLine(i) {
+        const seg = this.segments[i];
+        this.closeLineMenu(true);
+        await this.correct("PATCH", `/segments/${i}`, { start: seg.start, restore: true });
+      },
+      // Deleting needs the same button pressed twice; there is no dialog to click through for every stray line.
+      async deleteLine(i) {
+        if (!this.delArmed) { this.delArmed = true; return; }
+        const seg = this.segments[i];
+        this.menuLine = -1;
+        this.delArmed = false;
+        if (await this.correct("DELETE", `/segments/${i}?start=${encodeURIComponent(seg.start)}`)) {
+          this.focusLine(Math.min(i, this.segments.length - 1));
+        }
+      },
+
+      // ---- who said a line
+      async moveLine(i, speaker) {
+        const seg = this.segments[i];
+        const turn = this.wholeTurn && this.turnLength(i) > 1;
+        this.closeLineMenu(true);
+        if (speaker === seg.speaker) return;
+        await this.correct("PATCH", `/segments/${i}`, { start: seg.start, speaker, turn });
+      },
+
+      // ---- merging two speakers, from the Speakers popover
+      linesOf(spk) { return this.segments.reduce((n, s) => n + (s.speaker === spk ? 1 : 0), 0); },
+      onSpeakerRow(spk) {
+        if (this.popMerge === null) return this.pickSpeaker(spk);
+        if (spk !== this.popMerge && spk >= 0) this.mergeInto = spk;
+        this.$nextTick(() => this.$refs.speakersPop.querySelector(".spk__go")?.focus());
+      },
+      startMerge(spk) {
+        this.popRename = null;
+        this.mergeInto = null;
+        this.popMerge = spk;
+        this.$nextTick(() => this.$refs.speakersPop.querySelector(".spk__cancel")?.focus());
+      },
+      cancelMerge() {
+        const spk = this.popMerge;
+        this.popMerge = null;
+        this.mergeInto = null;
+        this.$nextTick(() => this.$refs.speakersPop?.querySelector(`[data-merge-spk="${spk}"]`)?.focus());
+      },
+      async confirmMerge() {
+        const from = this.popMerge, into = this.mergeInto;
+        if (from === null || into === null) return;
+        const ok = await this.correct("POST", "/speakers/merge", { from, into });
+        this.popMerge = null;
+        this.mergeInto = null;
+        if (ok) this.$nextTick(() => this.$refs.speakersPop?.querySelector(".spk__jump")?.focus());
+      },
+
+      // ---- undo everything
+      openDiscard() {
+        this.closeActions(false);
+        this.$refs.discardDialog.showModal();
+      },
+      async confirmDiscard() {
+        this.busy = true;
+        this.actionError = "";
+        const mine = ticket;
+        let body = null;
+        try {
+          const res = await fetch(`/api/meetings/${this.id}/corrections/discard`, { method: "POST" });
+          if (res.ok) body = await res.json();
+        } catch (e) { /* reported below */ }
+        if (mine !== ticket) return;
+        this.busy = false;
+        this.$refs.discardDialog.close();
+        if (!body) { this.actionError = this.t("action.failed"); return; }
+        this.resetReview();
+        this.showTranscript(body);
+      },
+      // Re-transcribing throws corrections away, so it asks first when there are any.
+      askRetranscribe() {
+        if (!this.hasCorrections) return this.retranscribe();
+        this.closeActions(false);
+        this.$refs.retxDialog.showModal();
+      },
+
       // ------------------------------------------------------------ search
-      runSearch() {
+      // `reveal` false keeps the page where it is: used when a correction changed the text under a search.
+      runSearch(reveal = true) {
         const r = findMatches(this.segments, this.query);
         this.matchTotal = r.total;
         this.matchLines = r.lines;
-        this.current = r.total ? 0 : -1;
-        if (r.total) this.revealMatch();
+        this.current = r.total ? (reveal ? 0 : Math.min(Math.max(this.current, 0), r.total - 1)) : -1;
+        if (r.total && reveal) this.revealMatch();
       },
       stepMatch(dir) {
         if (!this.matchTotal) return;
@@ -536,6 +856,7 @@ export function registerMeeting(Alpine) {
         this.segments = []; this.slots = []; this.lanes = []; this.ticks = []; this.ranking = []; this.colors = new Map(); this.now = 0; this.activeIdx = -1; this.playing = false; this.audioError = false;
         this.resetReview();
         this.setSummary("");
+        this.corrected = false;
         if (this.meta) { this.meta.status = "queued"; this.meta.progress = 0; }
         this.kind = "queued";
         this.state = "waiting";

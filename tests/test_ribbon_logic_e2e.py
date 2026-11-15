@@ -67,3 +67,30 @@ def test_lane_ranking_others_merge_and_plausibility(live_server, browser_page): 
     assert out["plausible"] == [False, True, True, False, True, True, False, False]
     assert out["keys"] == [1, 8, 0, 8, -1] and out["wrap"] == 0
     assert out["share"] == ["<1%", "11%", "0%"]
+
+
+def test_a_stretched_line_does_not_paint_the_ribbon_or_inflate_talk_time(live_server, browser_page):  # noqa: F811
+    """Whisper sometimes ends a short line minutes late. Files are not rewritten; the ribbon and the
+    talk-time ranking cut such a line back (same rule as timing.py)."""
+    page = browser_page
+    page.goto(live_server + "/")
+    out = page.evaluate("""async () => {
+      const r = await import('/static/js/ribbon.js');
+      const segs = [
+        { speaker: 0, start: 0, end: 20, text: 'Kita mula mesyuarat sekarang, terima kasih semua kerana hadir.' },
+        { speaker: 1, start: 20, end: 1004, text: 'Okay.' },
+        { speaker: 0, start: 1004, end: 1010, text: 'Baik.' },
+      ];
+      const ranking = r.rankSpeakers(segs);
+      const lanes = r.buildLanes(segs, 1010, 1000, ranking);
+      const slots = r.buildSlots(segs, 1010);
+      return {
+        ends: segs.map(r.spokenEnd), noText: r.spokenEnd({ start: 0, end: 500 }),
+        order: ranking.map((x) => x.speaker), seconds: ranking.map((x) => x.seconds),
+        okayBlock: lanes.find((l) => l.speaker === 1).blocks.map((b) => [b.start, b.end]),
+        okaySlotEnd: slots[1].end,
+      };
+    }""")
+    assert out["ends"] == [20, 32.5, 1010] and out["noText"] == 500
+    assert out["order"] == [0, 1] and out["seconds"] == [26, 12.5]   # not 984 s for one word
+    assert out["okayBlock"] == [[20, 32.5]] and out["okaySlotEnd"] == 32.5

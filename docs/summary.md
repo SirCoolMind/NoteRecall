@@ -18,7 +18,10 @@ A cloud engine (Google Gemini) is available as an opt-in alternative.
 | Identify speakers | Diarization labels who spoke when; names are editable and stick everywhere |
 | Languages | Auto-detect, or force Malay / English per upload. Handles mixed-language speech |
 | Meeting library | List of all meetings with date, duration, speaker count, language, progress |
-| Review | Floating player synced to the transcript — click a line to jump, click the progress bar to move the transcript |
+| Review | Player synced to the transcript — click a line to jump, click the ribbon to move the transcript. Playback speed 0.75× to 2×, back 5 s, and keys that work anywhere on the page (`?` lists them) |
+| Correct | Edit a line's text in place, move a line or a whole turn to another speaker, delete a line, merge two speakers. The pipeline's transcript is kept beside the corrected one, so one line or everything can be put back |
+| Search | The schedule's search box also searches every transcript and links to the moment (`#/m/<id>?t=<seconds>&q=<words>`) |
+| Read while it works | Local engine: the lines Whisper has produced so far are shown during processing; the browser tab shows the percentage |
 | Summary | Key points, topics, and speaking-time split; better summaries via a local LLM (Ollama) if installed |
 | Export | `.txt`, `.md` (with summary), `.srt` subtitles |
 | Re-run | **Re-transcribe** a meeting with the currently selected engine (no re-upload), or **Re-detect speakers** to redo only the labels — useful when you know the real speaker count |
@@ -219,6 +222,16 @@ fastest setting and the one that keeps the machine usable during a job.
 
 - Everything lives in `data/<meeting-id>/`: `audio.*`, `transcript.json`,
   `summary.md`, `meta.json`. Delete a meeting in the UI and the folder is gone.
+- The first correction to a meeting writes `transcript.original.json` next to
+  `transcript.json`: the transcript and speaker names as the pipeline produced
+  them. A corrected line also keeps its own original text in an `orig` field.
+  Discarding corrections restores the original and removes the file; so does
+  re-transcribing or re-detecting speakers, because that result is the new
+  original. Meetings from before this feature need no migration.
+- Search reads the transcripts straight from these files and keeps the text
+  in memory, re-reading a file only when it changes. There is no index.
+- While a job runs, the lines transcribed so far are held in memory only.
+  Nothing partial is written, so an interrupted job leaves no half transcript.
 - Models cache in `models/` (diarization, ~165 MB) and the HuggingFace cache
   (Whisper, ~3 GB) — `~/.cache/huggingface` unless `HF_HOME` says otherwise.
 - Local engine: **nothing leaves the machine**, works offline.
@@ -246,9 +259,14 @@ fastest setting and the one that keeps the machine usable during a job.
 | `pipeline.py` | Local pipeline: convert → Whisper → diarize → merge; model loading, device selection |
 | `engines.py` | Cloud pipeline: chunking, Gemini calls, VAD timing layout, tolerant parsing |
 | `summarizer.py` | Ollama or extractive summaries (Malay/English aware) |
+| `corrections.py` | Corrections to a finished transcript (text, speaker of a line or turn, delete, merge speakers) and the kept original |
+| `search.py` | Search across every finished transcript; in-memory, re-reads a file only when it changes |
+| `timing.py` | The rule for impossible line lengths (see §9, item 9); `static/js/ribbon.js` has the same rule |
 | `config.py` | `config.json` load/save (engine, key, device, model) |
 | `static/index.html` | The app UI (meeting list, transcript detail) |
 | `static/js/updates.js` | Updates store: version, daily quiet check, masthead indicator, Settings → Updates tab |
+| `static/js/meeting.js`, `player.js`, `ribbon.js`, `keys.js` | Meeting page: ribbon player, transcript, corrections, playback speed and page-wide keys |
+| `static/js/home.js`, `route.js`, `tabtitle.js` | Schedule, search results that link to a moment, progress in the browser tab |
 | `static/js/settings.js`, `static/js/setup.js` | Settings drawer: engine, defaults, setup checks, one-click install, about (`/setup` and `/about` redirect here) |
 | `requirements.txt` | Core + local engine, CPU-ready (487 MB installed) |
 | `requirements-gpu.txt` | CUDA libraries (~2.3 GB) — NVIDIA GPUs only |
@@ -270,7 +288,13 @@ fastest setting and the one that keeps the machine usable during a job.
 | `GET /api/meetings`, `GET /api/meetings/{id}` | list / detail + segments + summary |
 | `GET /api/meetings/{id}/audio` | the recording (supports HTTP Range) |
 | `GET /api/meetings/{id}/export?format=txt\|md\|srt` | download |
+| `GET /api/meetings/{id}/live?after=N` | while processing: lines transcribed so far, from line N |
+| `GET /api/search?q=` | every line in every finished meeting that contains the words (up to 3 shown per meeting, all counted) |
 | `PATCH /api/meetings/{id}` | rename meeting / speakers |
+| `PATCH /api/meetings/{id}/segments/{n}` | correct one line: `{start, text}`, `{start, restore: true}`, or `{start, speaker, turn}`. `start` must match the line, so a stale page cannot change the wrong line |
+| `DELETE /api/meetings/{id}/segments/{n}?start=` | delete one line |
+| `POST /api/meetings/{id}/speakers/merge` | `{from, into}`: merge two speakers |
+| `POST /api/meetings/{id}/corrections/discard` | put the original transcript back |
 | `POST /api/meetings/{id}/retranscribe` | re-run with the current engine |
 | `POST /api/meetings/{id}/rediarize?num_speakers=N` | redo speaker labels only |
 | `POST /api/meetings/{id}/resummarize` | regenerate the summary |
@@ -296,11 +320,26 @@ fastest setting and the one that keeps the machine usable during a job.
    it is not a multi-tenant service.
 8. **Uploads are not scanned or limited in size** by the app. nginx should cap
    them (`client_max_body_size`).
+9. **Whisper sometimes stretches a line's end time** across a long silence: a
+   few words that "last" minutes. In 22 real meetings this was 277 of 27,311
+   lines (1%), adding up to 126 minutes of talk time that never happened; the
+   longest was 984 s for one short line. `timing.py` cuts such a line back to
+   10 s plus half a second per character. That is an estimate of where the
+   line ended, not a measurement; the start time is never changed.
+10. **Reading while it works is local-engine only.** Gemini returns a chunk at
+    a time and its timings are rebuilt afterwards, so nothing is shown early.
+11. **After a correction, an Ollama summary is not rewritten automatically**
+    (it would take a minute per edit). The Summary tab says it is out of date
+    and offers Regenerate. The built-in summary is refreshed at once.
+12. **Search matches the words as typed** (ignoring case), anywhere in a line.
+    It does not know that "mesyuarat" and "meeting" mean the same thing.
 
 ## 10. Possible next steps
 
-- Word-level highlighting during playback (Whisper can emit word timestamps).
 - Speaker voice enrolment: name someone once, recognise them in future meetings.
+  Names already given are now suggested when renaming, which is the manual half.
+- Word-level highlighting during playback (Whisper can emit word timestamps).
+  Lines have a median length of about 2 s, so the gain is small.
 - Action-item extraction into a checklist, with owners.
 - Batch upload / watch-folder for a whole backlog of recordings.
 - Real login (users/roles) if it ever outgrows nginx basic auth.

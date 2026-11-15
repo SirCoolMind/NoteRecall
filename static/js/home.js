@@ -3,6 +3,9 @@ import { SPEAKER_CHOICES } from "./segmented.js";
 import { addSample, secondsLeft, minutesLeft } from "./eta.js";
 import { LOCALES, lengthParts } from "./format.js";
 import { titleEditing } from "./title-edit.js";
+import { setTabTitle } from "./tabtitle.js";
+import { meetingHref, markQuery } from "./route.js";
+import { formatTime } from "./ribbon.js";
 
 const POLL_MS = 2000;
 const PAGE_SIZE = 30;          // finished recordings shown per step
@@ -10,6 +13,7 @@ const VIEW_KEY = "noterecall.home.view";
 const MARK_MS = 2600;          // how long the row you came back from stays marked
 const STATUS_FILTERS = ["all", "ready", "progress", "failed"];
 const EXTENSIONS = ["mp3", "wav", "m4a", "mp4", "ogg", "opus", "flac", "aac", "webm"];
+const MIN_SAID = 2;            // the server ignores shorter searches (search.py MIN_QUERY)
 
 export function statusKind(status) {
   if (status === "done") return "ready";
@@ -41,13 +45,16 @@ export function matchesQuery(m, query) {
 
 // The schedule model. On now / Next always list their jobs (the status filter may hide them, search never does);
 // finished recordings are filtered by search and status, cut to `shown`, then grouped by month, newest first.
+// A recording passes the search when its title or quick summary matches, or when its id is in `said`:
+// the meetings where the query was spoken (from /api/search).
 // `monthLabel(created)` names a month heading. Returns { groups, matched, total, left }.
-export function buildSchedule(items, { status = "all", query = "", shown = PAGE_SIZE, monthLabel = (c) => c.slice(0, 7) } = {}) {
+export function buildSchedule(items, { status = "all", query = "", shown = PAGE_SIZE, monthLabel = (c) => c.slice(0, 7), said = null } = {}) {
   const active = (kind) => items.filter((m) => m.kind === kind && statusPasses(m, status)).sort(byCreated);
   const on = active("processing");
   const next = active("queued");
   const finished = items
-    .filter((m) => (m.kind === "ready" || m.kind === "failed") && statusPasses(m, status) && matchesQuery(m, query))
+    .filter((m) => (m.kind === "ready" || m.kind === "failed") && statusPasses(m, status)
+      && (matchesQuery(m, query) || !!(said && said.has(m.id))))
     .sort((a, b) => byCreated(b, a));
   const visible = finished.slice(0, shown);
   const months = [];
@@ -111,6 +118,11 @@ export function registerHome(Alpine) {
     status: "all",
     shown: PAGE_SIZE,
     markedId: null,     // the row you just came back from
+    said: {},           // meeting id -> { total, hits } where the search was spoken (from /api/search)
+    saidQuery: "",      // the query those results answer
+    saidTotal: 0,
+    _saidTicket: 0,
+    _readyKey: null,
 
     items: [],
     loaded: false,
@@ -120,6 +132,7 @@ export function registerHome(Alpine) {
     _timer: null,
     _samples: {},       // id -> eta samples
     _lastKind: {},      // id -> last seen status kind, for announcements
+    _runningId: null,   // the job the tab title last showed a percentage for
     _scrollY: 0,        // last scroll position seen while Home was showing
     _pending: null,     // { scrollY, lastId } waiting to be restored when Home is back on screen
     _markTimer: null,
@@ -141,9 +154,47 @@ export function registerHome(Alpine) {
         // Coming back from a meeting: titles or statuses may have changed meanwhile.
         this.refresh();
         this.comeBack();
+        if (this.query.trim()) this.searchSaid();   // lines may have been corrected while the meeting was open
       });
-      this.$watch("query", () => { this.shown = PAGE_SIZE; this.saveView(); });
+      this.$watch("query", () => { this.shown = PAGE_SIZE; this.saveView(); this.searchSaid(); });
+      if (this.query) this.searchSaid();
     },
+
+    // ---------------------------------------------------------------- search everything said
+    // The schedule search also looks inside every transcript. Rows where the words were spoken stay
+    // in the list and show the first few moments, each a link to that second of the meeting.
+    async searchSaid() {
+      const q = this.query.trim();
+      const mine = ++this._saidTicket;
+      if (q.length < MIN_SAID) { this.said = {}; this.saidQuery = ""; this.saidTotal = 0; return; }
+      let body = null;
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+        if (res.ok) body = await res.json();
+      } catch (e) { /* offline: titles and summaries still filter */ }
+      if (mine !== this._saidTicket) return;   // a newer search is on its way
+      this.said = body ? body.meetings : {};
+      this.saidTotal = body ? body.total : 0;
+      this.saidQuery = body ? q : "";
+    },
+    saidOf(m) { return (this.saidQuery && this.said[m.id]) || null; },
+    saidHits(m) {
+      const found = this.saidOf(m);
+      if (!found) return [];
+      return found.hits.map((h) => ({
+        key: h.index,
+        href: meetingHref(m.id, { t: h.start, q: this.saidQuery }),
+        time: formatTime(h.start),
+        who: h.speaker < 0 ? this.t("meeting.speaker_unknown")
+          : (m.speaker_names && m.speaker_names[h.speaker]) || this.t("meeting.speaker_n", { n: h.speaker + 1 }),
+        parts: markQuery(h.text, this.saidQuery),
+      }));
+    },
+    saidMore(m) {
+      const found = this.saidOf(m);
+      return found ? Math.max(0, found.total - found.hits.length) : 0;
+    },
+    saidAllHref(m) { return meetingHref(m.id, { q: this.saidQuery }); },
 
     // ---------------------------------------------------------------- remembered view (per tab)
     loadView() {
@@ -266,6 +317,7 @@ export function registerHome(Alpine) {
     get schedule() {
       return buildSchedule(this.items, {
         status: this.status, query: this.query, shown: this.shown,
+        said: this.saidQuery ? new Set(Object.keys(this.said)) : null,
         monthLabel: (created) => new Date(created).toLocaleDateString(this.locale(), { month: "long", year: "numeric" }),
       });
     },
@@ -276,7 +328,10 @@ export function registerHome(Alpine) {
     get filtering() { return !!this.query.trim() || this.status !== "all"; },
     get countText() {
       const { matched, total } = this.schedule;
-      return this.filtering ? this.t("schedule.count.some", { n: matched, total }) : this.t("schedule.count.all", { n: total });
+      if (!this.filtering) return this.t("schedule.count.all", { n: total });
+      const some = this.t("schedule.count.some", { n: matched, total });
+      if (!this.saidQuery || !this.saidTotal) return some;
+      return some + " · " + this.t(this.saidTotal === 1 ? "schedule.count.said.one" : "schedule.count.said.other", { n: this.saidTotal });
     },
     get statusOptions() {
       return STATUS_FILTERS.map((v) => ({ value: v, label: this.t("schedule.filter." + v) }));
@@ -299,6 +354,10 @@ export function registerHome(Alpine) {
         this.offline = false;
         const first = !this.loaded;
         this.loaded = true;
+        // a recording finished or went away since the last search: the moments may be out of date
+        const key = this.readyKey();
+        if (this.saidQuery && this._readyKey !== null && key !== this._readyKey) this.searchSaid();
+        this._readyKey = key;
         if (first && !Alpine.store("route").id) this.comeBack();
       } catch (e) {
         this.offline = true;   // transient: keep what we have and retry
@@ -326,6 +385,16 @@ export function registerHome(Alpine) {
       });
       for (const id of Object.keys(this._samples)) if (!seen.has(id)) delete this._samples[id];
       this.items = next;
+      this.syncTitle();
+    },
+
+    // On the schedule the browser tab shows the running job's percentage (a meeting page sets its own).
+    syncTitle() {
+      if (Alpine.store("route").id) return;
+      const running = this.items.find((m) => m.kind === "processing");
+      const last = this.items.find((m) => m.id === this._runningId);
+      this._runningId = running ? running.id : null;
+      setTabTitle({ progress: running ? running.progress : null, failed: !running && last?.kind === "failed" });
     },
 
     // Announce status changes (not every progress tick) for screen readers.
@@ -336,6 +405,8 @@ export function registerHome(Alpine) {
       const key = { queued: "live.queued", processing: "live.processing", ready: "live.ready", failed: "live.failed" }[kind];
       this.announcement = this.t(key, { title: m.title });
     },
+
+    readyKey() { return this.items.filter((m) => m.kind === "ready").map((m) => m.id).join(","); },
 
     // ---------------------------------------------------------------- row display
     locale() { return LOCALES[Alpine.store("i18n").lang] || "en-GB"; },
