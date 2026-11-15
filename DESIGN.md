@@ -400,6 +400,7 @@ Borders carry state. A 1px `rule-strong` stroke marks a quiet control at rest. A
 Buttons are plain, firm and labelled in the slot face.
 - **Shape:** gently softened corners (6px), at least 44px tall.
 - **Plate:** `action` fill with `on-action` text in Label type, 16px to 24px side padding, hover to `action-hover`. Use it for one action per screen only (see The One Plate Rule).
+- **Link field (optional):** only when Settings turns YouTube links on. One line under the plate-inverse button: a transparent field and an "Add link" button, both outlined in `on-action` like the segmented groups, so the reversed button stays the single filled control. On a phone the button wraps under the field.
 - **Plate inverse:** the button on the drop slot. It reverses the plate, with an `on-action` fill and `action` text, fades to 0.88 opacity on hover, and gets a double focus ring (2px plate colour, then 5px `on-action`).
 - **Outline:** transparent with a 1px `rule-strong` stroke and ink text in Label Small. It fills with paper on hover. Icons sit to the left at 20px.
 - **Danger:** a red-tint fill with a 2px red stroke and red text. On hover it inverts to a solid red fill with sheet-coloured text.

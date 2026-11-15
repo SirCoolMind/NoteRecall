@@ -960,7 +960,11 @@ export function registerMeeting(Alpine) {
         const text = this.t(key);
         return text === key ? this.t("stage.unknown") : text;
       },
-      errorText() { return this.meta?.error || this.t("row.error_unknown"); },
+      errorText() {
+        const key = this.meta?.error_code ? "error." + this.meta.error_code : "";
+        const text = key ? this.t(key) : "";
+        return text && text !== key ? text : this.meta?.error || this.t("row.error_unknown");
+      },
 
       // ------------------------------------------------------------ download
       get exportHref() { return `/api/meetings/${this.id}/export?format=${this.format}`; },

@@ -112,7 +112,8 @@ def test_keys_work_anywhere_but_not_while_typing(live_server, browser_page, meet
     box = page.get_by_label("Text of the line at 0:04")
     box.press("ArrowRight")
     box.press_sequentially(" k")
-    assert page.evaluate(f"{AUDIO}.currentTime") == 0
+    # not moved 5 s on; the earlier play and pause may have advanced it by a few milliseconds
+    assert page.evaluate(f"{AUDIO}.currentTime") < 1
     expect(page.get_by_role("button", name="Play", exact=True)).to_be_visible()
 
 

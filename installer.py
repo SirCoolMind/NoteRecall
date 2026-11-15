@@ -25,7 +25,8 @@ BASE_DIR = Path(__file__).parent
 # Run order: packages first (later steps import them), then the big downloads.
 ORDER = ["core", "faster_whisper", "ctranslate2", "sherpa_onnx", "ffmpeg",
          "whisper_model", "seg_model", "emb_model",
-         "nemo_toolkit", "nemotron_model"]   # optional Nemotron-3 speakers: only on request
+         "nemo_toolkit", "nemotron_model",   # optional Nemotron-3 speakers: only on request
+         "yt_dlp"]                           # optional YouTube links: only on request
 STEP_IDS = frozenset(ORDER)
 # A step is pointless when one of these failed earlier in the same run.
 DEPENDS = {"whisper_model": ("faster_whisper",), "nemotron_model": ("nemo_toolkit",)}
@@ -207,6 +208,14 @@ def step_nemotron_model(report):
         stop.set()
 
 
+def step_yt_dlp(report):
+    """The YouTube downloader, for the optional "YouTube links" setting. Always
+    --upgrade: YouTube changes often, so the same step is also the fix when
+    downloads stop working."""
+    _pip_install(["--upgrade", "yt-dlp"], report)
+    importlib.invalidate_caches()   # so the running server sees the new package
+
+
 def default_steps() -> dict:
     return {
         "core": step_requirements,
@@ -219,6 +228,7 @@ def default_steps() -> dict:
         "emb_model": step_emb_model,
         "nemo_toolkit": step_nemo_toolkit,
         "nemotron_model": step_nemotron_model,
+        "yt_dlp": step_yt_dlp,
     }
 
 

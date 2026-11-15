@@ -22,6 +22,7 @@ A cloud engine (Google Gemini) is available as an opt-in alternative.
 | Correct | Edit a line's text in place, move a line or a whole turn to another speaker, delete a line, merge two speakers. The pipeline's transcript is kept beside the corrected one, so one line or everything can be put back |
 | Search | The schedule's search box also searches every transcript and links to the moment (`#/m/<id>?t=<seconds>&q=<words>`) |
 | Read while it works | Local engine: the lines Whisper has produced so far are shown during processing; the browser tab shows the percentage |
+| YouTube link (optional) | Off by default. `youtube_links` in Settings adds one link field to Home; the audio track is downloaded with yt-dlp (installed on request, not in `requirements.txt`) and then runs through the normal pipeline |
 | Summary | Key points, topics, and speaking-time split; better summaries via a local LLM (Ollama) if installed |
 | Export | `.txt`, `.md` (with summary), `.srt` subtitles |
 | Re-run | **Re-transcribe** a meeting with the currently selected engine (no re-upload), or **Re-detect speakers** to redo only the labels — useful when you know the real speaker count |
@@ -232,6 +233,13 @@ fastest setting and the one that keeps the machine usable during a job.
   in memory, re-reading a file only when it changes. There is no index.
 - While a job runs, the lines transcribed so far are held in memory only.
   Nothing partial is written, so an interrupted job leaves no half transcript.
+- A meeting added from a YouTube link (optional setting, off by default) has
+  `source_url` in `meta.json` and no `audio_file` until the worker has
+  downloaded the audio into the same folder. The download is the only network
+  traffic: a request to YouTube for that one video. Nothing of the user's is
+  sent. A failed download is a failed meeting with an `error_code`
+  (`link_unavailable`, `link_blocked`, `link_live`, `link_too_long`, `link_network`,
+  `link_failed`) that the screens translate; **Try again** downloads again.
 - Models cache in `models/` (diarization, ~165 MB) and the HuggingFace cache
   (Whisper, ~3 GB) — `~/.cache/huggingface` unless `HF_HOME` says otherwise.
 - Local engine: **nothing leaves the machine**, works offline.
@@ -262,7 +270,8 @@ fastest setting and the one that keeps the machine usable during a job.
 | `corrections.py` | Corrections to a finished transcript (text, speaker of a line or turn, delete, merge speakers) and the kept original |
 | `search.py` | Search across every finished transcript; in-memory, re-reads a file only when it changes |
 | `timing.py` | The rule for impossible line lengths (see §9, item 9); `static/js/ribbon.js` has the same rule |
-| `config.py` | `config.json` load/save (engine, key, device, model) |
+| `linkfetch.py` | Optional YouTube links: recognises a video link (one video, playlist parts dropped), downloads the audio track with yt-dlp, maps failures to codes |
+| `config.py` | `config.json` load/save (engine, key, device, model, `youtube_links`) |
 | `static/index.html` | The app UI (meeting list, transcript detail) |
 | `static/js/updates.js` | Updates store: version, daily quiet check, masthead indicator, Settings → Updates tab |
 | `static/js/meeting.js`, `player.js`, `ribbon.js`, `keys.js` | Meeting page: ribbon player, transcript, corrections, playback speed and page-wide keys |
@@ -285,6 +294,7 @@ fastest setting and the one that keeps the machine usable during a job.
 | `GET/POST /api/config`, `POST /api/config/test-gemini` | settings, key test |
 | `GET /api/status`, `GET /api/setup` | badges; requirements + architecture |
 | `POST /api/meetings` | upload (multipart: file, title, language, num_speakers) |
+| `POST /api/meetings/link` | only with `youtube_links` on: `{url, title?, language?, num_speakers?}` adds a meeting from a YouTube link; refusals are `link_off` (403), `link_bad_link` (400), `link_not_installed` (409) |
 | `GET /api/meetings`, `GET /api/meetings/{id}` | list / detail + segments + summary |
 | `GET /api/meetings/{id}/audio` | the recording (supports HTTP Range) |
 | `GET /api/meetings/{id}/export?format=txt\|md\|srt` | download |
@@ -333,6 +343,19 @@ fastest setting and the one that keeps the machine usable during a job.
     and offers Regenerate. The built-in summary is refreshed at once.
 12. **Search matches the words as typed** (ignoring case), anywhere in a line.
     It does not know that "mesyuarat" and "meeting" mean the same thing.
+13. **YouTube links depend on YouTube.** The optional link feature needs
+    internet and the yt-dlp package, and YouTube changes its site often, so a
+    download that worked last month can fail until the downloader is updated
+    (Settings → General → Update the downloader). yt-dlp 2026.10.26 also warns
+    that fetching from YouTube without a JavaScript runtime (Deno) is
+    deprecated and that some formats may be missing; the m4a audio track still
+    downloaded in the test here, but that may stop one day and NoteRecall does
+    not install Deno. YouTube also sometimes refuses a whole internet
+    connection for a while ("confirm you're not a bot", HTTP 429): then every
+    link fails until YouTube lifts it, and updating does not help. NoteRecall
+    does not use your YouTube login to get around that. Public, finished videos up to 6 hours only: no live
+    streams, playlists, private or age-restricted videos. The download runs in
+    the single worker, so it waits its turn like any job.
 
 ## 10. Possible next steps
 

@@ -34,3 +34,10 @@ def test_dictionaries_have_same_keys_and_status_vocabulary():
         ["Menunggu", "Sedang diproses", "Siap", "Gagal"]
     assert [en[f"status.{s}"] for s in ("queued", "processing", "ready", "failed")] == \
         ["Queued", "Processing", "Ready", "Failed"]
+
+
+def test_static_files_are_rechecked_so_an_update_never_runs_old_scripts(client):
+    r = client.get("/static/js/home.js")
+    assert r.status_code == 200 and r.headers["cache-control"] == "no-cache"
+    again = client.get("/static/js/home.js", headers={"If-None-Match": r.headers["etag"]})
+    assert again.status_code == 304 and again.headers["cache-control"] == "no-cache"
